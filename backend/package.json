@@ -1,0 +1,12 @@
+{
+  "name": "friend-recommend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "dependencies": {
+    "express": "^4.19.2",
+    "neo4j-driver": "^5.19.0",
+    "dotenv": "^16.4.0",
+    "cors": "^2.8.5"
+  }
+}
