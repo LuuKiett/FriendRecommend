@@ -1,10 +1,16 @@
 import express from "express";
 import cors from "cors";
 import driver from "./neo4j.js";
+import authRoutes from "./routes/auth.js";
+import friendRoutes from "./routes/friends.js";
+import { authMiddleware } from "./middlewares/authMiddleware.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.use("/api/auth", authRoutes);
+app.use("/api/friends", authMiddleware, friendRoutes);
 
 // ✅ 1. Tạo user mới
 app.post("/users", async (req, res) => {
@@ -38,7 +44,7 @@ app.post("/friend", async (req, res) => {
 });
 
 // ✅ 3. Gợi ý bạn của bạn (Friend of Friend)
-app.get("/recommend/:name", async (req, res) => {
+app.get("/api/recommend/:name", async (req, res) => {
   const { name } = req.params;
   const session = driver.session();
   try {
@@ -54,7 +60,7 @@ app.get("/recommend/:name", async (req, res) => {
 });
 
 // ✅ 4. Gợi ý theo sở thích
-app.get("/recommend-interest/:name", async (req, res) => {
+app.get("/api/recommend-interest/:name", async (req, res) => {
   const { name } = req.params;
   const session = driver.session();
   try {
