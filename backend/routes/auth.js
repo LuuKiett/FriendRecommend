@@ -1,69 +1,141 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
 import driver from "../neo4j.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 const SECRET = "friend_secret_2025";
 
-// ✅ Đăng ký
+const formatNeoDateTime = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value.toString === "function") return value.toString();
+  return null;
+};
+
+const buildProfile = (node) => {
+  if (!node) return null;
+  const props = node.properties ?? node;
+  const fallbackId = node.elementId || node.identity?.toString();
+  return {
+    id: props.id || fallbackId,
+    name: props.name,
+    email: props.email,
+    city: props.city,
+    headline: props.headline,
+    workplace: props.workplace,
+    avatar: props.avatar,
+    about: props.about,
+    interests: props.interests || [],
+    createdAt: formatNeoDateTime(props.createdAt),
+    lastActive: formatNeoDateTime(props.lastActive),
+  };
+};
+
+const normalizeInterests = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 router.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+  const {
+    name,
+    email,
+    password,
+    city,
+    headline,
+    workplace,
+    about,
+    interests,
+    avatar,
+  } = req.body;
   const session = driver.session();
 
   try {
-    // Băm mật khẩu
     const hashed = await bcrypt.hash(password, 10);
 
-    // Kiểm tra tồn tại email
     const existing = await session.run(
-      `MATCH (u:User {email:$email}) RETURN u`,
+      `MATCH (u:User {email: $email}) RETURN u`,
       { email }
     );
     if (existing.records.length > 0) {
-      return res.status(400).json({ error: "Email đã tồn tại!" });
+      return res.status(400).json({ error: "Email already exists." });
     }
 
-    // Tạo user
+    const generatedAvatar =
+      avatar ||
+      `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(
+        name || email
+      )}`;
+
     await session.run(
       `
       CREATE (u:User {
-        name:$name,
-        email:$email,
-        password:$password,
-        createdAt:datetime()
+        id: $id,
+        name: $name,
+        email: $email,
+        password: $password,
+        city: $city,
+        headline: $headline,
+        workplace: $workplace,
+        about: $about,
+        interests: $interests,
+        avatar: $avatar,
+        createdAt: datetime(),
+        lastActive: datetime()
       })
       `,
-      { name, email, password: hashed }
+      {
+        id: randomUUID(),
+        name,
+        email,
+        password: hashed,
+        city: city ?? null,
+        headline: headline ?? null,
+        workplace: workplace ?? null,
+        about: about ?? null,
+        interests: normalizeInterests(interests),
+        avatar: generatedAvatar,
+      }
     );
 
-    res.json({ success: true, message: "Đăng ký thành công!" });
+    res.json({ success: true, message: "Registered successfully." });
   } catch (err) {
-    console.error("❌ Lỗi đăng ký:", err);
-    res.status(500).json({ error: "Đăng ký thất bại!" });
+    console.error("Register error:", err);
+    res.status(500).json({ error: "Registration failed." });
   } finally {
     await session.close();
   }
 });
 
-// ✅ Đăng nhập
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   const session = driver.session();
 
   try {
     const result = await session.run(
-      `MATCH (u:User {email:$email}) RETURN u`,
+      `MATCH (u:User {email: $email}) RETURN u`,
       { email }
     );
 
-    if (result.records.length === 0)
-      return res.status(401).json({ error: "Email không tồn tại!" });
+    if (result.records.length === 0) {
+      return res.status(401).json({ error: "Email not found." });
+    }
 
-    const user = result.records[0].get("u").properties;
+    const userNode = result.records[0].get("u");
+    const user = userNode.properties;
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid)
-      return res.status(401).json({ error: "Sai mật khẩu!" });
+    if (!valid) {
+      return res.status(401).json({ error: "Incorrect password." });
+    }
 
     const token = jwt.sign(
       { name: user.name, email: user.email },
@@ -73,11 +145,85 @@ router.post("/login", async (req, res) => {
 
     res.json({
       token,
-      user: { name: user.name, email: user.email },
+      user: buildProfile(userNode),
     });
   } catch (err) {
-    console.error("❌ Lỗi đăng nhập:", err);
-    res.status(500).json({ error: "Đăng nhập thất bại!" });
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Login failed." });
+  } finally {
+    await session.close();
+  }
+});
+
+router.get("/me", authMiddleware, async (req, res) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User {email: $email}) RETURN u`,
+      { email: req.user.email }
+    );
+
+    if (!result.records.length) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    res.json(buildProfile(result.records[0].get("u")));
+  } catch (err) {
+    console.error("Fetch profile error:", err);
+    res.status(500).json({ error: "Unable to load user profile." });
+  } finally {
+    await session.close();
+  }
+});
+
+router.put("/profile", authMiddleware, async (req, res) => {
+  const {
+    name,
+    city,
+    headline,
+    workplace,
+    about,
+    avatar,
+    interests,
+  } = req.body;
+
+  const updates = {};
+  const assignIfDefined = (field, value) => {
+    if (typeof value !== "undefined") {
+      updates[field] = value === "" ? null : value;
+    }
+  };
+
+  assignIfDefined("name", name);
+  assignIfDefined("city", city);
+  assignIfDefined("headline", headline);
+  assignIfDefined("workplace", workplace);
+  assignIfDefined("about", about);
+  assignIfDefined("avatar", avatar);
+  if (typeof interests !== "undefined") {
+    updates.interests = normalizeInterests(interests);
+  }
+
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {email: $email})
+      SET u += $updates
+      SET u.lastActive = datetime()
+      RETURN u
+      `,
+      { email: req.user.email, updates }
+    );
+
+    if (!result.records.length) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    res.json({ success: true, user: buildProfile(result.records[0].get("u")) });
+  } catch (err) {
+    console.error("Profile update error:", err);
+    res.status(500).json({ error: "Unable to update profile." });
   } finally {
     await session.close();
   }

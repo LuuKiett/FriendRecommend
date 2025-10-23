@@ -1,0 +1,76 @@
+import { useState, useEffect } from "react";
+import { api } from "../api";
+
+const initialState = {
+  results: [],
+  loading: false,
+  error: null,
+  active: false,
+};
+
+export default function useFriendSearch(
+  query,
+  {
+    enabled = true,
+    minLength = 2,
+    debounceMs = 350,
+    limit = 20,
+    refreshKey = 0,
+  } = {}
+) {
+  const [state, setState] = useState(initialState);
+  const trimmed = (query || "").trim();
+
+  useEffect(() => {
+    if (!enabled || trimmed.length < minLength) {
+      setState((prev) => ({
+        results: trimmed.length === 0 ? [] : prev.results,
+        loading: false,
+        error: null,
+        active: false,
+      }));
+      return;
+    }
+
+    let cancelled = false;
+
+    setState((prev) => ({
+      ...prev,
+      loading: true,
+      error: null,
+      active: true,
+    }));
+
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await api.get("/friends/search", {
+          params: { q: trimmed, limit },
+        });
+        if (cancelled) return;
+        setState({
+          results: res.data,
+          loading: false,
+          error: null,
+          active: true,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        const message =
+          error?.response?.data?.error || "Khong the tim kiem luc nay.";
+        setState({
+          results: [],
+          loading: false,
+          error: message,
+          active: true,
+        });
+      }
+    }, debounceMs);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [enabled, trimmed, minLength, debounceMs, limit, refreshKey]);
+
+  return state;
+}

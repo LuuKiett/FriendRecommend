@@ -1,48 +1,76 @@
 import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
-import { useNavigate, Link } from "react-router-dom";
 
 export default function Login() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
     try {
       const res = await api.post("/auth/login", form);
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
-      nav("/");
-    } catch {
-      alert("Sai thông tin đăng nhập!");
+      navigate("/", { replace: true });
+    } catch (err) {
+      const message =
+        err?.response?.data?.error ||
+        "Sai thong tin dang nhap. Vui long thu lai.";
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h2>FriendConnect</h2>
-        <form onSubmit={handleSubmit}>
+        <div className="auth-brand">
+          <h1>FriendConnect</h1>
+          <p>Dang nhap de tiep tuc ket noi voi nhung nguoi ban moi.</p>
+        </div>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <label htmlFor="email">Email</label>
           <input
-            className="form-control mb-2"
+            id="email"
+            name="email"
             type="email"
-            placeholder="Email"
             value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            onChange={handleChange}
+            placeholder="nhanvien@example.com"
             required
           />
+
+          <label htmlFor="password">Mat khau</label>
           <input
-            className="form-control mb-3"
+            id="password"
+            name="password"
             type="password"
-            placeholder="Mật khẩu"
             value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            onChange={handleChange}
+            placeholder="********"
             required
           />
-          <button className="btn btn-primary w-100 mb-2">Đăng nhập</button>
+
+          {error && <div className="form-error">{error}</div>}
+
+          <button type="submit" className="button primary" disabled={loading}>
+            {loading ? "Dang dang nhap..." : "Dang nhap"}
+          </button>
         </form>
-        <p className="text-center">
-          Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
+
+        <p className="auth-footer">
+          Chua co tai khoan? <Link to="/register">Dang ky ngay</Link>
         </p>
       </div>
     </div>
