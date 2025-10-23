@@ -16,7 +16,7 @@ export default function useNetworkInsights() {
       console.error("Fetch insights failed:", err);
       const message =
         err?.response?.data?.error ||
-        "Khong the tai thong ke mang luoi. Vui long thu lai.";
+        "Không thể tải thống kê mạng lưới. Vui lòng thử lại.";
       setError(message);
     } finally {
       setLoading(false);

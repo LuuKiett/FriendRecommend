@@ -42,7 +42,7 @@ export default function useFriendSuggestions(filters, options = {}) {
         console.error("Fetch suggestions failed:", error);
         const message =
           error?.response?.data?.error ||
-          "Khong the tai danh sach goi y. Vui long thu lai.";
+          "Không thể tải danh sách gợi ý. Vui lòng thử lại.";
         setState((prev) => ({ ...prev, loading: false, error: message }));
       }
     },
@@ -65,7 +65,7 @@ export default function useFriendSuggestions(filters, options = {}) {
     } catch (error) {
       const message =
         error?.response?.data?.error ||
-        "Khong the gui loi moi ket ban. Vui long thu lai.";
+        "Không thể gửi lời mời kết bạn. Vui lòng thử lại.";
       return { success: false, message };
     }
   }, []);
@@ -82,7 +82,7 @@ export default function useFriendSuggestions(filters, options = {}) {
     } catch (error) {
       const message =
         error?.response?.data?.error ||
-        "Khong the an goi y luc nay.";
+        "Không thể ẩn gợi ý lúc này.";
       return { success: false, message };
     }
   }, []);

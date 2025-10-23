@@ -19,10 +19,10 @@ const ICONS = {
 };
 
 const STATUS_LABELS = {
-  none: "Chua ket noi",
-  friend: "Da la ban be",
-  incoming: "Dang cho ban",
-  outgoing: "Dang cho phan hoi",
+  none: "Chưa kết nối",
+  friend: "Đã là bạn bè",
+  incoming: "Đang chờ bạn",
+  outgoing: "Đang chờ phản hồi",
 };
 
 const STATUS_CLASS = {
@@ -42,11 +42,22 @@ export default function SearchResultCard({
   const [pendingAction, setPendingAction] = useState(false);
 
   const avatar = result.avatar || fallbackAvatar;
-  const mutualPreview = (result.mutualFriends || [])
-    .slice(0, 2)
+  const mutualNames = (result.mutualFriends || [])
     .map((friend) => friend.name)
-    .join(", ");
-  const sharedInterests = result.sharedInterests || [];
+    .filter(Boolean);
+  const mutualPreview = mutualNames.slice(0, 3).join(", ");
+  const hasMoreMutual = mutualNames.length > 3;
+  const sharedInterests = Array.isArray(result.sharedInterests)
+    ? result.sharedInterests.filter(Boolean)
+    : [];
+  const interests = Array.isArray(result.interests)
+    ? result.interests.filter(Boolean)
+    : [];
+  const displayInterests =
+    interests.length > 0 ? interests.slice(0, 4) : sharedInterests.slice(0, 4);
+  const sharedInterestSet = new Set(
+    sharedInterests.map((interest) => interest.trim())
+  );
   const statusLabel = STATUS_LABELS[result.status] || "";
   const statusClass = STATUS_CLASS[result.status] || "status-none";
 
@@ -79,7 +90,7 @@ export default function SearchResultCard({
                 handleAsync(onAccept, result.request?.id, result.id)
               }
             >
-              {pendingAction ? "Dang xu ly..." : "Chap nhan"}
+              {pendingAction ? "Đang xử lý..." : "Chấp nhận"}
             </button>
             <button
               type="button"
@@ -89,7 +100,7 @@ export default function SearchResultCard({
                 handleAsync(onReject, result.request?.id, result.id)
               }
             >
-              Bo qua
+              Bỏ qua
             </button>
           </>
         );
@@ -101,7 +112,7 @@ export default function SearchResultCard({
             disabled={pendingAction}
             onClick={() => handleAsync(onCancel, result.request?.id, result.id)}
           >
-            {pendingAction ? "Dang huy..." : "Huy loi moi"}
+            {pendingAction ? "Đang hủy..." : "Hủy lời mời"}
           </button>
         );
       default:
@@ -112,7 +123,7 @@ export default function SearchResultCard({
             disabled={pendingAction}
             onClick={() => handleAsync(onSendRequest, result.id)}
           >
-            {pendingAction ? "Dang gui..." : "Ket ban"}
+            {pendingAction ? "Đang gửi..." : "Kết bạn"}
           </button>
         );
     }
@@ -146,17 +157,28 @@ export default function SearchResultCard({
           )}
           <li>
             <Icon path={ICONS.people} />
-            {result.mutualCount} ban chung
-            {mutualPreview && <small> ({mutualPreview})</small>}
+            {result.mutualCount} bạn chung
+            {mutualPreview && (
+              <small>
+                {" "}
+                ({mutualPreview}
+                {hasMoreMutual ? ", ..." : ""})
+              </small>
+            )}
           </li>
         </ul>
-        {sharedInterests.length > 0 && (
+        {displayInterests.length > 0 && (
           <div className="friend-card__tags">
-            {sharedInterests.slice(0, 4).map((interest) => (
-              <span key={interest} className="chip">
-                {interest}
-              </span>
-            ))}
+            {displayInterests.map((interest) => {
+              const label = interest.trim();
+              const isShared = sharedInterestSet.has(label);
+              return (
+                <span key={label} className="chip">
+                  {label}
+                  {isShared ? " (chung)" : ""}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>

@@ -28,16 +28,16 @@ const RefreshIcon = () => (
 const buildFilterSummary = (filters, searchTerm) => {
   const chips = [];
   if (filters.mutualMin > 0) {
-    chips.push(`>= ${filters.mutualMin} ban chung`);
+    chips.push(`≥ ${filters.mutualMin} bạn chung`);
   }
   if (filters.city !== "all") {
-    chips.push(`Thanh pho: ${filters.city}`);
+    chips.push(`Thành phố: ${filters.city}`);
   }
   if (filters.interest !== "all") {
-    chips.push(`So thich: ${filters.interest}`);
+    chips.push(`Sở thích: ${filters.interest}`);
   }
   if (searchTerm) {
-    chips.push(`Tu khoa: "${searchTerm}"`);
+    chips.push(`Từ khóa: "${searchTerm}"`);
   }
   return chips;
 };
@@ -57,8 +57,8 @@ export default function SuggestionPanel({
   const chips = buildFilterSummary(filters, searchTerm);
   const resultCount = suggestions.length;
   const title = profile
-    ? `Goi y ket ban cho ${profile.name}`
-    : "Goi y ket ban";
+    ? `Gợi ý kết bạn cho ${profile.name}`
+    : "Gợi ý kết bạn";
 
   return (
     <section className="suggestions-wrapper">
@@ -66,8 +66,8 @@ export default function SuggestionPanel({
         <div>
           <h2>{title}</h2>
           <p>
-            {resultCount} goi y phu hop. Lam moi de nhan danh sach khac
-            hoac dieu chinh bo loc de ket noi chinh xac hon.
+            {resultCount} gợi ý phù hợp. Làm mới để nhận danh sách khác
+            hoặc điều chỉnh bộ lọc để kết nối chính xác hơn.
           </p>
         </div>
         <button type="button" className="icon-button" onClick={onRefresh}>
@@ -87,12 +87,12 @@ export default function SuggestionPanel({
 
       {lastAction?.type === "dismiss" && (
         <div className="inline-info">
-          Da an mot goi y khoi danh sach cua ban.
+          Đã ẩn một gợi ý khỏi danh sách của bạn.
         </div>
       )}
       {lastAction?.type === "request" && (
         <div className="inline-success">
-          Da gui loi moi ket ban thanh cong.
+          Đã gửi lời mời kết bạn thành công.
         </div>
       )}
 
@@ -100,7 +100,7 @@ export default function SuggestionPanel({
         <div className="empty-state">
           <p>{error}</p>
           <button type="button" className="button primary" onClick={onRefresh}>
-            Thu lai
+            Thử lại
           </button>
         </div>
       ) : loading ? (
@@ -111,12 +111,12 @@ export default function SuggestionPanel({
         </div>
       ) : resultCount === 0 ? (
         <div className="empty-state">
-          <h3>Danh sach hien dang trong</h3>
+          <h3>Danh sách hiện đang trống</h3>
           <p>
-            Thu noi long bo loc hoac lam moi de xem nhieu goi y moi hon.
+            Thử nới lỏng bộ lọc hoặc làm mới để xem nhiều gợi ý mới hơn.
           </p>
           <button type="button" className="button primary" onClick={onRefresh}>
-            Lam moi goi y
+            Làm mới gợi ý
           </button>
         </div>
       ) : (

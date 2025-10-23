@@ -29,26 +29,6 @@ export default function Home() {
   const [searchRefreshIndex, setSearchRefreshIndex] = useState(0);
   const [banner, setBanner] = useState(null);
 
-  const suggestionFilters = useMemo(
-    () => ({
-      mutualMin: filters.mutualMin,
-      city: filters.city === "all" ? null : filters.city,
-      interest: filters.interest === "all" ? null : filters.interest,
-      includeInterestMatches: filters.includeInterestMatches,
-    }),
-    [filters]
-  );
-
-  const {
-    suggestions,
-    loading: suggestionsLoading,
-    error: suggestionsError,
-    refresh: refreshSuggestions,
-    sendRequest,
-    dismissSuggestion,
-    lastAction,
-  } = useFriendSuggestions(suggestionFilters, { limit: 24 });
-
   const {
     requests,
     loading: requestsLoading,
@@ -88,6 +68,27 @@ export default function Home() {
     active: searchActive,
   } = searchState;
 
+  const suggestionFilters = useMemo(
+    () => ({
+      mutualMin: filters.mutualMin,
+      city: filters.city === "all" ? null : filters.city,
+      interest: filters.interest === "all" ? null : filters.interest,
+      includeInterestMatches: filters.includeInterestMatches,
+      keyword: trimmedSearch.length >= 2 ? trimmedSearch : null,
+    }),
+    [filters, trimmedSearch]
+  );
+
+  const {
+    suggestions,
+    loading: suggestionsLoading,
+    error: suggestionsError,
+    refresh: refreshSuggestions,
+    sendRequest,
+    dismissSuggestion,
+    lastAction,
+  } = useFriendSuggestions(suggestionFilters, { limit: 24 });
+
   const loadProfile = useCallback(async () => {
     setProfileLoading(true);
     try {
@@ -99,7 +100,7 @@ export default function Home() {
       console.error("Fetch profile failed:", error);
       const message =
         error?.response?.data?.error ||
-        "Khong the tai thong tin tai khoan. Vui long dang nhap lai.";
+        "Không thể tải thông tin tài khoản. Vui lòng đăng nhập lại.";
       setProfileError(message);
       setBanner({ type: "error", message });
     } finally {
@@ -170,7 +171,7 @@ export default function Home() {
     if (result.success) {
       setBanner({
         type: "success",
-        message: "Da gui loi moi ket ban.",
+        message: "Đã gửi lời mời kết bạn.",
       });
       refreshRequests();
       refreshSuggestions();
@@ -187,7 +188,7 @@ export default function Home() {
     if (result.success) {
       setBanner({
         type: "info",
-        message: "Da an goi y khoi danh sach cua ban.",
+        message: "Đã ẩn gợi ý khỏi danh sách của bạn.",
       });
       refreshSuggestions();
       refreshInsights();
@@ -202,7 +203,7 @@ export default function Home() {
     if (result.success) {
       setBanner({
         type: "success",
-        message: "Hai ban da tro thanh ban be!",
+        message: "Hai bạn đã trở thành bạn bè!",
       });
       refreshRequests();
       refreshSuggestions();
@@ -219,7 +220,7 @@ export default function Home() {
     if (result.success) {
       setBanner({
         type: "info",
-        message: "Da bo qua loi moi.",
+        message: "Đã bỏ qua lời mời.",
       });
       refreshRequests();
       refreshInsights();
@@ -235,7 +236,7 @@ export default function Home() {
     if (result.success) {
       setBanner({
         type: "info",
-        message: "Da huy loi moi ket ban.",
+        message: "Đã hủy lời mời kết bạn.",
       });
       refreshRequests();
       refreshInsights();
@@ -294,7 +295,7 @@ export default function Home() {
           <button
             onClick={dismissBanner}
             className="icon-button"
-            aria-label="Dong thong bao"
+            aria-label="Đóng thông báo"
             type="button"
           >
             x

@@ -35,20 +35,20 @@ export default function SearchResultsPanel({
     <section className="search-results">
       <header className="search-header">
         <div>
-          <h2>Ket qua tim kiem cho "{trimmedQuery}"</h2>
+          <h2>Kết quả tìm kiếm cho "{trimmedQuery}"</h2>
           <span>
             {active
               ? loading
-                ? "Dang quet mang luoi de tim doi tuong phu hop..."
-                : `${results.length} ket qua phu hop.`
-              : "Nhap it nhat 2 ky tu de bat dau tim kiem."}
+                ? "Đang quét mạng lưới để tìm đối tượng phù hợp..."
+                : `${results.length} kết quả phù hợp.`
+              : "Nhập ít nhất 2 ký tự để bắt đầu tìm kiếm."}
           </span>
         </div>
       </header>
 
       {!active ? (
         <div className="empty-state">
-          <p>Nhap them ky tu de tim theo ten, so thich hoac thanh pho.</p>
+          <p>Nhập thêm ký tự để tìm theo tên, sở thích hoặc thành phố.</p>
         </div>
       ) : error ? (
         <div className="empty-state">
@@ -62,8 +62,8 @@ export default function SearchResultsPanel({
         </div>
       ) : results.length === 0 ? (
         <div className="empty-state">
-          <h3>Khong tim thay ket qua phu hop</h3>
-          <p>Thu mot tu khoa khac hoac xem danh sach goi y ben duoi.</p>
+          <h3>Không tìm thấy kết quả phù hợp</h3>
+          <p>Thử một từ khóa khác hoặc xem danh sách gợi ý bên dưới.</p>
         </div>
       ) : (
         <div className="suggestion-grid">

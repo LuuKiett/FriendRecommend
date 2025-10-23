@@ -1,10 +1,10 @@
 import React from "react";
 
 const mutualOptions = [
-  { value: 0, label: "Tat ca" },
-  { value: 1, label: "Tu 1 ban chung" },
-  { value: 3, label: "Tu 3 ban chung" },
-  { value: 5, label: "Tu 5 ban chung" },
+  { value: 0, label: "Tất cả" },
+  { value: 1, label: "Từ 1 bạn chung" },
+  { value: 3, label: "Từ 3 bạn chung" },
+  { value: 5, label: "Từ 5 bạn chung" },
 ];
 
 export default function LeftRail({
@@ -51,7 +51,7 @@ export default function LeftRail({
             />
             <h2>{profile.name}</h2>
             <p className="profile-headline">
-              {profile.headline || "Cung xay dung mang luoi ket noi moi"}
+              {profile.headline || "Cùng xây dựng mạng lưới kết nối mới"}
             </p>
             <ul className="profile-meta">
               {profile.city && (
@@ -68,7 +68,7 @@ export default function LeftRail({
             {insights?.friendCount !== undefined && (
               <div className="profile-stats">
                 <strong>{insights.friendCount}</strong>
-                <span>Ban be hien tai</span>
+                <span>Bạn bè hiện tại</span>
               </div>
             )}
           </>
@@ -79,36 +79,36 @@ export default function LeftRail({
 
       <section className="side-card filter-card">
         <header className="card-header">
-          <h3>Bo loc goi y</h3>
+          <h3>Bộ lọc gợi ý</h3>
           <button type="button" className="link-button" onClick={onResetFilters}>
-            Xoa bo loc
+            Xóa bộ lọc
           </button>
         </header>
 
         <div className="filter-group">
-          <label htmlFor="search">Tim kiem nhanh</label>
+          <label htmlFor="search">Tìm kiếm nhanh</label>
           <input
             id="search"
             type="text"
             value={searchTerm}
-            placeholder="Ten, thanh pho hoac so thich..."
+            placeholder="Tên, thành phố hoặc sở thích..."
             onChange={(event) => onSearchChange(event.target.value)}
           />
           <small className="help-text">
             {trimmedSearch.length === 0
-              ? "Nhap tu khoa de tim ban be theo ten, thanh pho hoac so thich."
+              ? "Nhập từ khóa để tìm bạn bè theo tên, thành phố hoặc sở thích."
               : trimmedSearch.length < 2
-              ? "Nhap it nhat 2 ky tu de bat dau tim kiem."
+              ? "Nhập ít nhất 2 ký tự để bắt đầu tìm kiếm."
               : searchLoading
-              ? "Dang tim kiem..."
+              ? "Đang tìm kiếm..."
               : searchActive
-              ? `Dang hien thi ${searchCount} ket qua tim kiem.`
-              : "Nhap de tiep tuc tim kiem."}
+              ? `Đang hiển thị ${searchCount} kết quả tìm kiếm.`
+              : "Nhập để tiếp tục tìm kiếm."}
           </small>
         </div>
 
         <div className="filter-group">
-          <label htmlFor="mutualMin">Ban chung</label>
+          <label htmlFor="mutualMin">Bạn chung</label>
           <select
             id="mutualMin"
             value={filters.mutualMin}
@@ -123,13 +123,13 @@ export default function LeftRail({
         </div>
 
         <div className="filter-group">
-          <label htmlFor="city">Thanh pho</label>
+          <label htmlFor="city">Thành phố</label>
           <select
             id="city"
             value={filters.city}
             onChange={handleSelect("city")}
           >
-            <option value="all">Tat ca</option>
+            <option value="all">Tất cả</option>
             {cities.map((city) => (
               <option key={city} value={city}>
                 {city}
@@ -139,13 +139,13 @@ export default function LeftRail({
         </div>
 
         <div className="filter-group">
-          <label htmlFor="interest">So thich</label>
+          <label htmlFor="interest">Sở thích</label>
           <select
             id="interest"
             value={filters.interest}
             onChange={handleSelect("interest")}
           >
-            <option value="all">Tat ca</option>
+            <option value="all">Tất cả</option>
             {interests.map((interest) => (
               <option key={interest} value={interest}>
                 {interest}
@@ -162,7 +162,7 @@ export default function LeftRail({
             onChange={handleToggleInterestMatches}
           />
           <label htmlFor="interestToggle">
-            Chi hien thi so thich trung khop
+            Chỉ hiển thị sở thích trùng khớp
           </label>
         </div>
       </section>

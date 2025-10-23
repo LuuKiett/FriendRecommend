@@ -5,7 +5,9 @@ const SECRET = "friend_secret_2025";
 export function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
-    return res.status(401).json({ error: "Missing authentication token." });
+    return res
+      .status(401)
+      .json({ error: "Thieu token xac thuc. Vui long dang nhap lai." });
   }
 
   try {
@@ -13,6 +15,6 @@ export function authMiddleware(req, res, next) {
     req.user = decoded;
     next();
   } catch {
-    res.status(401).json({ error: "Token khong hop le." });
+    res.status(401).json({ error: "Token không hợp lệ." });
   }
 }

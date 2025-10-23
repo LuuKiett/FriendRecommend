@@ -16,7 +16,7 @@ export default function useFriendList() {
       console.error("Fetch friend list failed:", err);
       const message =
         err?.response?.data?.error ||
-        "Khong the lay danh sach ban be luc nay.";
+        "Không thể lấy danh sách bạn bè lúc này.";
       setError(message);
     } finally {
       setLoading(false);

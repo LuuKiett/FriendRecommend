@@ -56,7 +56,7 @@ export default function useFriendSearch(
       } catch (error) {
         if (cancelled) return;
         const message =
-          error?.response?.data?.error || "Khong the tim kiem luc nay.";
+          error?.response?.data?.error || "Không thể tìm kiếm lúc này.";
         setState({
           results: [],
           loading: false,

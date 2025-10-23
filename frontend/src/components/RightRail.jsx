@@ -13,17 +13,17 @@ const formatRelativeTime = (value) => {
   const hour = 60 * minute;
   const day = 24 * hour;
 
-  if (diff < minute) return "Vua xong";
+  if (diff < minute) return "Vừa xong";
   if (diff < hour) {
     const minutes = Math.round(diff / minute);
-    return `${minutes} phut truoc`;
+    return `${minutes} phút trước`;
   }
   if (diff < day) {
     const hours = Math.round(diff / hour);
-    return `${hours} gio truoc`;
+    return `${hours} giờ trước`;
   }
   const days = Math.round(diff / day);
-  return `${days} ngay truoc`;
+  return `${days} ngày trước`;
 };
 
 const StatTile = ({ label, value }) => (
@@ -82,14 +82,14 @@ const RequestItem = ({
               className="button primary"
               onClick={() => onAccept(request.id)}
             >
-              Chap nhan
+              Chấp nhận
             </button>
             <button
               type="button"
               className="button ghost"
               onClick={() => onReject(request.id)}
             >
-              Bo qua
+              Bỏ qua
             </button>
           </>
         ) : (
@@ -98,7 +98,7 @@ const RequestItem = ({
             className="button ghost"
             onClick={() => onCancel(request.id)}
           >
-            Huy loi moi
+            Hủy lời mời
           </button>
         )}
       </div>
@@ -121,7 +121,7 @@ export default function RightRail({
     <aside className="right-rail">
       <section className="side-card">
         <header className="card-header">
-          <h3>Thong ke mang luoi</h3>
+          <h3>Thống kê mạng lưới</h3>
         </header>
         {insightsLoading ? (
           <div className="skeleton skeleton-insights" />
@@ -130,23 +130,23 @@ export default function RightRail({
         ) : insights ? (
           <>
             <div className="stat-grid">
-              <StatTile label="Ban be" value={insights.friendCount} />
-              <StatTile label="Loi moi den" value={insights.incomingCount} />
-              <StatTile label="Da gui" value={insights.outgoingCount} />
-              <StatTile label="Goi y" value={insights.suggestionCount} />
+              <StatTile label="Bạn bè" value={insights.friendCount} />
+              <StatTile label="Lời mời đến" value={insights.incomingCount} />
+              <StatTile label="Đã gửi" value={insights.outgoingCount} />
+              <StatTile label="Gợi ý" value={insights.suggestionCount} />
             </div>
             <div className="insight-section">
-              <h4>Khu vuc noi bat</h4>
+              <h4>Khu vực nổi bật</h4>
               <ChipList
                 items={insights.topCities}
-                placeholder="Chua co du lieu thanh pho."
+                placeholder="Chưa có dữ liệu thành phố."
               />
             </div>
             <div className="insight-section">
-              <h4>So thich chung</h4>
+              <h4>Sở thích chung</h4>
               <ChipList
                 items={insights.topInterests}
-                placeholder="Chua co thong ke so thich."
+                placeholder="Chưa có thống kê sở thích."
               />
             </div>
           </>
@@ -155,7 +155,7 @@ export default function RightRail({
 
       <section className="side-card">
         <header className="card-header">
-          <h3>Loi moi ket ban</h3>
+          <h3>Lời mời kết bạn</h3>
         </header>
 
         {requestsLoading ? (
@@ -165,7 +165,7 @@ export default function RightRail({
         ) : (
           <>
             <div className="request-section">
-              <h4>Dang cho ban</h4>
+              <h4>Đang chờ bạn</h4>
               {requests.incoming?.length ? (
                 <ul className="request-list">
                   {requests.incoming.map((request) => (
@@ -180,13 +180,13 @@ export default function RightRail({
                 </ul>
               ) : (
                 <p className="empty-message">
-                  Chua co loi moi moi. Ban hay ket noi them nhe!
+                  Chưa có lời mời mới. Bạn hãy kết nối thêm nhé!
                 </p>
               )}
             </div>
 
             <div className="request-section">
-              <h4>Ban da gui</h4>
+              <h4>Bạn đã gửi</h4>
               {requests.outgoing?.length ? (
                 <ul className="request-list">
                   {requests.outgoing.map((request) => (
@@ -200,7 +200,7 @@ export default function RightRail({
                 </ul>
               ) : (
                 <p className="empty-message">
-                  Ban chua gui loi moi nao gan day.
+                  Bạn chưa gửi lời mời nào gần đây.
                 </p>
               )}
             </div>

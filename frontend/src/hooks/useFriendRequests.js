@@ -18,7 +18,7 @@ export default function useFriendRequests() {
       console.error("Fetch requests failed:", err);
       const message =
         err?.response?.data?.error ||
-        "Khong the tai danh sach loi moi. Vui long thu lai.";
+        "Không thể tải danh sách lời mời. Vui lòng thử lại.";
       setError(message);
     } finally {
       setLoading(false);
@@ -38,7 +38,7 @@ export default function useFriendRequests() {
       } catch (err) {
         const message =
           err?.response?.data?.error ||
-          "Khong the chap nhan loi moi luc nay.";
+          "Không thể chấp nhận lời mời lúc này.";
         return { success: false, message };
       }
     },
@@ -56,7 +56,7 @@ export default function useFriendRequests() {
       } catch (err) {
         const message =
           err?.response?.data?.error ||
-          "Khong the tu choi loi moi luc nay.";
+          "Không thể từ chối lời mời lúc này.";
         return { success: false, message };
       }
     },
@@ -72,7 +72,7 @@ export default function useFriendRequests() {
       } catch (err) {
         const message =
           err?.response?.data?.error ||
-          "Khong the huy loi moi luc nay.";
+          "Không thể hủy lời mời lúc này.";
         return { success: false, message };
       }
     },

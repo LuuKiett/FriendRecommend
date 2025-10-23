@@ -67,7 +67,9 @@ router.post("/register", async (req, res) => {
       { email }
     );
     if (existing.records.length > 0) {
-      return res.status(400).json({ error: "Email already exists." });
+      return res
+        .status(400)
+        .json({ error: "Email đã tồn tại. Vui lòng dùng email khác." });
     }
 
     const generatedAvatar =
@@ -107,10 +109,15 @@ router.post("/register", async (req, res) => {
       }
     );
 
-    res.json({ success: true, message: "Registered successfully." });
+    res.json({
+      success: true,
+      message: "Đăng ký thành công. Bạn có thể đăng nhập ngay.",
+    });
   } catch (err) {
     console.error("Register error:", err);
-    res.status(500).json({ error: "Registration failed." });
+    res
+      .status(500)
+      .json({ error: "Đăng ký thất bại. Vui lòng thử lại sau." });
   } finally {
     await session.close();
   }
@@ -127,14 +134,16 @@ router.post("/login", async (req, res) => {
     );
 
     if (result.records.length === 0) {
-      return res.status(401).json({ error: "Email not found." });
+      return res
+        .status(401)
+        .json({ error: "Không tìm thấy tài khoản với email này." });
     }
 
     const userNode = result.records[0].get("u");
     const user = userNode.properties;
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      return res.status(401).json({ error: "Incorrect password." });
+      return res.status(401).json({ error: "Mật khẩu không chính xác." });
     }
 
     const token = jwt.sign(
@@ -149,7 +158,7 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ error: "Login failed." });
+    res.status(500).json({ error: "Đăng nhập thất bại. Thử lại sau." });
   } finally {
     await session.close();
   }
@@ -164,13 +173,15 @@ router.get("/me", authMiddleware, async (req, res) => {
     );
 
     if (!result.records.length) {
-      return res.status(404).json({ error: "User not found." });
+      return res.status(404).json({ error: "Không tìm thấy người dùng." });
     }
 
     res.json(buildProfile(result.records[0].get("u")));
   } catch (err) {
     console.error("Fetch profile error:", err);
-    res.status(500).json({ error: "Unable to load user profile." });
+    res
+      .status(500)
+      .json({ error: "Không thể tải thông tin người dùng." });
   } finally {
     await session.close();
   }
@@ -217,13 +228,18 @@ router.put("/profile", authMiddleware, async (req, res) => {
     );
 
     if (!result.records.length) {
-      return res.status(404).json({ error: "User not found." });
+      return res.status(404).json({ error: "Không tìm thấy người dùng." });
     }
 
-    res.json({ success: true, user: buildProfile(result.records[0].get("u")) });
+    res.json({
+      success: true,
+      user: buildProfile(result.records[0].get("u")),
+    });
   } catch (err) {
     console.error("Profile update error:", err);
-    res.status(500).json({ error: "Unable to update profile." });
+    res
+      .status(500)
+      .json({ error: "Không thể cập nhật thông tin người dùng." });
   } finally {
     await session.close();
   }

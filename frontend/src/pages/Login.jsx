@@ -25,7 +25,7 @@ export default function Login() {
     } catch (err) {
       const message =
         err?.response?.data?.error ||
-        "Sai thong tin dang nhap. Vui long thu lai.";
+        "Sai thông tin đăng nhập. Vui lòng thử lại.";
       setError(message);
     } finally {
       setLoading(false);
@@ -37,7 +37,7 @@ export default function Login() {
       <div className="auth-card">
         <div className="auth-brand">
           <h1>FriendConnect</h1>
-          <p>Dang nhap de tiep tuc ket noi voi nhung nguoi ban moi.</p>
+          <p>Đăng nhập để tiếp tục kết nối với những người bạn mới.</p>
         </div>
         <form onSubmit={handleSubmit} className="auth-form">
           <label htmlFor="email">Email</label>
@@ -51,7 +51,7 @@ export default function Login() {
             required
           />
 
-          <label htmlFor="password">Mat khau</label>
+          <label htmlFor="password">Mật khẩu</label>
           <input
             id="password"
             name="password"
@@ -65,12 +65,12 @@ export default function Login() {
           {error && <div className="form-error">{error}</div>}
 
           <button type="submit" className="button primary" disabled={loading}>
-            {loading ? "Dang dang nhap..." : "Dang nhap"}
+            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
 
         <p className="auth-footer">
-          Chua co tai khoan? <Link to="/register">Dang ky ngay</Link>
+          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
         </p>
       </div>
     </div>

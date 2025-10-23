@@ -20,6 +20,19 @@ const userProjection = (alias = "u") => `
 
 const mapRecords = (records, key) => records.map((record) => record.get(key));
 
+const toPlainNumber = (value) => {
+  if (value && typeof value.toNumber === "function") {
+    return value.toNumber();
+  }
+  if (value && typeof value.toInt === "function") {
+    return value.toInt();
+  }
+  if (value && typeof value.low === "number") {
+    return value.low;
+  }
+  return value;
+};
+
 const topOccurrences = (values, limit = 3) => {
   const counts = new Map();
   values.forEach((value) => {
@@ -46,7 +59,9 @@ router.get("/list", async (req, res) => {
     res.json(mapRecords(result.records, "friend"));
   } catch (err) {
     console.error("Failed to load friend list:", err);
-    res.status(500).json({ error: "Unable to load friend list." });
+    res.status(500).json({
+      error: "Không thể tải danh sách bạn bè.",
+    });
   } finally {
     await session.close();
   }
@@ -60,8 +75,13 @@ router.get("/suggestions", async (req, res) => {
     city,
     interest,
     includeInterestMatches = "true",
+    keyword: rawKeyword,
   } = req.query;
   const includeInterestMatchesBool = includeInterestMatches !== "false";
+  const keywordNormalized =
+    typeof rawKeyword === "string" && rawKeyword.trim().length > 0
+      ? rawKeyword.trim().toLowerCase()
+      : null;
 
   try {
     const result = await session.run(
@@ -98,6 +118,14 @@ router.get("/suggestions", async (req, res) => {
               OR $interest IN sharedInterests
               OR $interest IN coalesce(candidate.interests, [])
             )
+        AND (
+              $keyword IS NULL
+              OR toLower(candidate.name) CONTAINS $keyword
+              OR (candidate.city IS NOT NULL AND toLower(candidate.city) CONTAINS $keyword)
+              OR (candidate.headline IS NOT NULL AND toLower(candidate.headline) CONTAINS $keyword)
+              OR (candidate.workplace IS NOT NULL AND toLower(candidate.workplace) CONTAINS $keyword)
+              OR ANY(interest IN coalesce(candidate.interests, []) WHERE toLower(interest) CONTAINS $keyword)
+            )
       WITH candidate, strategies, mutualFriends, sharedInterests,
            CASE WHEN "mutual" IN strategies THEN 0 ELSE 1 END AS priority
       RETURN {
@@ -129,14 +157,27 @@ router.get("/suggestions", async (req, res) => {
         city: city ?? null,
         interest: interest ?? null,
         includeInterestMatches: includeInterestMatchesBool,
+        keyword: keywordNormalized,
         limit: Number(limit),
       }
     );
 
-    res.json(mapRecords(result.records, "suggestion"));
+    const suggestions = mapRecords(result.records, "suggestion").map(
+      (suggestion) => ({
+        ...suggestion,
+        mutualCount: toPlainNumber(suggestion.mutualCount),
+        mutualFriends: (suggestion.mutualFriends || []).map((friend) => ({
+          ...friend,
+        })),
+      })
+    );
+
+    res.json(suggestions);
   } catch (err) {
     console.error("Failed to load friend suggestions:", err);
-    res.status(500).json({ error: "Unable to load friend suggestions." });
+    res.status(500).json({
+      error: "Không thể tải danh sách gợi ý kết bạn.",
+    });
   } finally {
     await session.close();
   }
@@ -145,7 +186,9 @@ router.get("/suggestions", async (req, res) => {
 router.post("/suggestions/dismiss", async (req, res) => {
   const { targetId } = req.body;
   if (!targetId) {
-    return res.status(400).json({ error: "Missing target user id." });
+    return res.status(400).json({
+      error: "Vui long cung cap ma nguoi dung can xu ly.",
+    });
   }
 
   const session = driver.session();
@@ -163,13 +206,17 @@ router.post("/suggestions/dismiss", async (req, res) => {
     );
 
     if (!result.records.length) {
-      return res.status(404).json({ error: "Target user not found." });
+      return res
+        .status(404)
+        .json({ error: "Không tìm thấy người dùng tương ứng." });
     }
 
     res.json({ success: true });
   } catch (err) {
     console.error("Failed to dismiss suggestion:", err);
-    res.status(500).json({ error: "Unable to dismiss suggestion right now." });
+    res.status(500).json({
+      error: "Không thể ẩn gợi ý ngay lúc này.",
+    });
   } finally {
     await session.close();
   }
@@ -246,9 +293,10 @@ router.get("/search", async (req, res) => {
         ELSE 3
       END AS statusOrder,
       size(mutualNodes) AS mutualOrder,
+      CASE WHEN size(mutualNodes) > 0 THEN 0 ELSE 1 END AS mutualPriority,
       toLower(user.name) AS nameOrder
       RETURN result
-      ORDER BY statusOrder, mutualOrder DESC, nameOrder ASC
+      ORDER BY mutualPriority, statusOrder, mutualOrder DESC, nameOrder ASC
       LIMIT toInteger($limit)
       `,
       {
@@ -258,10 +306,17 @@ router.get("/search", async (req, res) => {
       }
     );
 
-    res.json(mapRecords(result.records, "result"));
+    const results = mapRecords(result.records, "result").map((item) => ({
+      ...item,
+      mutualCount: toPlainNumber(item.mutualCount),
+    }));
+
+    res.json(results);
   } catch (err) {
     console.error("Failed to search friends:", err);
-    res.status(500).json({ error: "Unable to search right now." });
+    res.status(500).json({
+      error: "Không thể tìm kiếm bạn bè ngay lúc này.",
+    });
   } finally {
     await session.close();
   }
@@ -304,7 +359,9 @@ router.get("/requests", async (req, res) => {
     });
   } catch (err) {
     console.error("Failed to load friend requests:", err);
-    res.status(500).json({ error: "Unable to load friend requests." });
+    res.status(500).json({
+      error: "Không thể tải danh sách lời mời kết bạn.",
+    });
   } finally {
     await session.close();
   }
@@ -313,7 +370,9 @@ router.get("/requests", async (req, res) => {
 router.post("/requests", async (req, res) => {
   const { targetId, message } = req.body;
   if (!targetId) {
-    return res.status(400).json({ error: "Missing target user." });
+    return res
+      .status(400)
+      .json({ error: "Vui long chon nguoi dung can gui loi moi." });
   }
 
   const session = driver.session();
@@ -332,7 +391,9 @@ router.post("/requests", async (req, res) => {
     );
 
     if (result.records.length === 0) {
-      return res.status(404).json({ error: "Target user not found." });
+      return res
+        .status(404)
+        .json({ error: "Không tìm thấy người dùng tương ứng." });
     }
 
     const record = result.records[0];
@@ -343,19 +404,21 @@ router.post("/requests", async (req, res) => {
     const incoming = record.get("incoming");
 
     if (!targetNode) {
-      return res.status(404).json({ error: "Target user not found." });
+      return res
+        .status(404)
+        .json({ error: "Không tìm thấy người dùng tương ứng." });
     }
 
     if (meNode.elementId === targetNode.elementId) {
       return res
         .status(400)
-        .json({ error: "You cannot send a request to yourself." });
+        .json({ error: "Ban khong the gui loi moi cho chinh minh." });
     }
 
     if (friendRel) {
       return res
         .status(409)
-        .json({ error: "You are already connected with this user." });
+        .json({ error: "Ban da ket ban voi nguoi dung nay." });
     }
 
     if (incoming) {
@@ -408,7 +471,9 @@ router.post("/requests", async (req, res) => {
     res.json({ success: true, status: "pending" });
   } catch (err) {
     console.error("Failed to send friend request:", err);
-    res.status(500).json({ error: "Unable to send friend request." });
+    res.status(500).json({
+      error: "Không thể gửi lời mời kết bạn.",
+    });
   } finally {
     await session.close();
   }
@@ -418,7 +483,7 @@ router.patch("/requests/:requestId", async (req, res) => {
   const { requestId } = req.params;
   const { action } = req.body;
   if (!["accept", "reject"].includes(action)) {
-    return res.status(400).json({ error: "Unsupported action." });
+    return res.status(400).json({ error: "Hanh dong khong hop le." });
   }
 
   const session = driver.session();
@@ -433,7 +498,7 @@ router.patch("/requests/:requestId", async (req, res) => {
     );
 
     if (!result.records.length) {
-      return res.status(404).json({ error: "Request not found." });
+      return res.status(404).json({ error: "Không tìm thấy yêu cầu." });
     }
 
     if (action === "accept") {
@@ -467,7 +532,9 @@ router.patch("/requests/:requestId", async (req, res) => {
     res.json({ success: true, status: "declined" });
   } catch (err) {
     console.error("Failed to process friend request:", err);
-    res.status(500).json({ error: "Unable to process friend request." });
+    res.status(500).json({
+      error: "Không thể xử lý lời mời kết bạn.",
+    });
   } finally {
     await session.close();
   }
@@ -489,13 +556,15 @@ router.delete("/requests/:requestId", async (req, res) => {
     );
 
     if (!result.records.length || result.records[0].get("deleted").toInt() === 0) {
-      return res.status(404).json({ error: "Request not found." });
+      return res.status(404).json({ error: "Không tìm thấy yêu cầu." });
     }
 
     res.json({ success: true });
   } catch (err) {
     console.error("Failed to cancel friend request:", err);
-    res.status(500).json({ error: "Unable to cancel friend request." });
+    res.status(500).json({
+      error: "Không thể hủy lời mời kết bạn.",
+    });
   } finally {
     await session.close();
   }
@@ -567,7 +636,9 @@ router.get("/insights", async (req, res) => {
     });
   } catch (err) {
     console.error("Failed to load network insights:", err);
-    res.status(500).json({ error: "Unable to load network insights." });
+    res.status(500).json({
+      error: "Không thể tải thống kê mạng lưới.",
+    });
   } finally {
     await session.close();
   }

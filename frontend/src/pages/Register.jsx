@@ -3,16 +3,16 @@ import { Link } from "react-router-dom";
 import { api } from "../api";
 
 const INTEREST_OPTIONS = [
-  "Cong nghe",
-  "Am nhac",
-  "Doc sach",
-  "The thao",
-  "Chay bo",
-  "Du lich",
-  "Nau an",
-  "Chup anh",
-  "Thiet ke",
-  "Khoi nghiep",
+  "Công nghệ",
+  "Âm nhạc",
+  "Đọc sách",
+  "Thể thao",
+  "Chạy bộ",
+  "Du lịch",
+  "Nấu ăn",
+  "Chụp ảnh",
+  "Thiết kế",
+  "Khởi nghiệp",
 ];
 
 const initialForm = {
@@ -89,14 +89,14 @@ export default function Register() {
 
     try {
       await api.post("/auth/register", payload);
-      setSuccess("Dang ky thanh cong! Ban co the dang nhap ngay bay gio.");
+      setSuccess("Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.");
       setForm(initialForm);
       setSelectedInterest("");
       setCustomInterest("");
     } catch (err) {
       const message =
         err?.response?.data?.error ||
-        "Dang ky that bai, vui long kiem tra lai thong tin.";
+        "Đăng ký thất bại, vui lòng kiểm tra lại thông tin.";
       setError(message);
     } finally {
       setLoading(false);
@@ -108,10 +108,10 @@ export default function Register() {
       <div className="auth-card">
         <div className="auth-brand">
           <h1>FriendConnect</h1>
-          <p>Tao ho so de nhan cac goi y ket ban chinh xac hon.</p>
+          <p>Tạo hồ sơ để nhận các gợi ý kết bạn chính xác hơn.</p>
         </div>
         <form onSubmit={handleSubmit} className="auth-form">
-          <label htmlFor="name">Ho va ten</label>
+          <label htmlFor="name">Họ và tên</label>
           <input
             id="name"
             name="name"
@@ -132,7 +132,7 @@ export default function Register() {
             required
           />
 
-          <label htmlFor="password">Mat khau</label>
+          <label htmlFor="password">Mật khẩu</label>
           <input
             id="password"
             name="password"
@@ -143,40 +143,40 @@ export default function Register() {
             required
           />
 
-          <label htmlFor="city">Thanh pho</label>
+          <label htmlFor="city">Thành phố</label>
           <input
             id="city"
             name="city"
             value={form.city}
             onChange={handleChange}
-            placeholder="TP. Ho Chi Minh"
+            placeholder="TP. Hồ Chí Minh"
           />
 
-          <label htmlFor="headline">Gioi thieu ngan</label>
+          <label htmlFor="headline">Giới thiệu ngắn</label>
           <input
             id="headline"
             name="headline"
             value={form.headline}
             onChange={handleChange}
-            placeholder="Vi du: Yeu cong nghe va du lich"
+            placeholder="Ví dụ: Yêu công nghệ và du lịch"
           />
 
-          <label htmlFor="workplace">Noi lam viec</label>
+          <label htmlFor="workplace">Nơi làm việc</label>
           <input
             id="workplace"
             name="workplace"
             value={form.workplace}
             onChange={handleChange}
-            placeholder="Cong ty ABC"
+            placeholder="Công ty ABC"
           />
 
-          <label>So thich</label>
+          <label>Sở thích</label>
           <div className="interest-picker">
             <select
               value={selectedInterest}
               onChange={handleSelectInterest}
             >
-              <option value="">Chon so thich</option>
+              <option value="">Chọn sở thích</option>
               {INTEREST_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -188,14 +188,14 @@ export default function Register() {
                 type="text"
                 value={customInterest}
                 onChange={(event) => setCustomInterest(event.target.value)}
-                placeholder="Them so thich khac"
+                placeholder="Thêm sở thích khác"
               />
               <button
                 type="button"
                 className="button ghost"
                 onClick={handleAddCustomInterest}
               >
-                Them
+                Thêm
               </button>
             </div>
             <div className="selected-interests">
@@ -206,7 +206,7 @@ export default function Register() {
                     type="button"
                     className="chip-remove"
                     onClick={() => handleRemoveInterest(interest)}
-                    aria-label={`Xoa ${interest}`}
+                    aria-label={`Xóa ${interest}`}
                   >
                     x
                   </button>
@@ -214,19 +214,19 @@ export default function Register() {
               ))}
               {form.interests.length === 0 && (
                 <small className="help-text">
-                  Chon so thich de he thong de xuat nhung nguoi co diem chung.
+                  Chọn sở thích để hệ thống đề xuất những người có điểm chung.
                 </small>
               )}
             </div>
           </div>
 
-          <label htmlFor="about">Gioi thieu chi tiet</label>
+          <label htmlFor="about">Giới thiệu chi tiết</label>
           <textarea
             id="about"
             name="about"
             value={form.about}
             onChange={handleChange}
-            placeholder="Chia se doi net ve ban..."
+            placeholder="Chia sẻ đôi nét về bạn..."
             rows={3}
           />
 
@@ -234,12 +234,12 @@ export default function Register() {
           {success && <div className="form-success">{success}</div>}
 
           <button type="submit" className="button primary" disabled={loading}>
-            {loading ? "Dang tao tai khoan..." : "Dang ky"}
+            {loading ? "Đang tạo tài khoản..." : "Đăng ký"}
           </button>
         </form>
 
         <p className="auth-footer">
-          Da co tai khoan? <Link to="/login">Dang nhap</Link>
+          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
         </p>
       </div>
     </div>

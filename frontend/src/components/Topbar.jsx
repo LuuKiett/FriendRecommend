@@ -54,10 +54,10 @@ export default function Topbar({
   }, [showMenu]);
 
   const displayName = loadingUser
-    ? "Dang tai..."
-    : user?.name || "Nguoi dung";
+    ? "Đang tải..."
+    : user?.name || "Người dùng";
   const avatar = user?.avatar || defaultAvatar;
-  const headline = user?.headline || "San sang ket noi";
+  const headline = user?.headline || "Sẵn sàng kết nối";
 
   const incoming = requests?.incoming || [];
   const outgoing = requests?.outgoing || [];
@@ -78,7 +78,7 @@ export default function Topbar({
         <div className="brand-mark">FC</div>
         <div className="brand-copy">
           <h1>FriendConnect</h1>
-          <span>Goi y ban be thong minh</span>
+          <span>Gợi ý bạn bè thông minh</span>
         </div>
       </div>
 
@@ -87,7 +87,7 @@ export default function Topbar({
           type="button"
           className="icon-button"
           onClick={onRefresh}
-          title="Lam moi goi y"
+          title="Làm mới gợi ý"
         >
           <RefreshIcon />
         </button>
@@ -97,7 +97,7 @@ export default function Topbar({
             type="button"
             className="icon-button friend-toggle"
             onClick={() => setShowMenu((open) => !open)}
-            title="Ban be va loi moi"
+            title="Bạn bè và lời mời"
           >
             <FriendsIcon />
             {pendingCount > 0 && (
@@ -108,14 +108,14 @@ export default function Topbar({
           {showMenu && (
             <div className="friends-menu">
               <section>
-                <h4>Loi moi dang cho</h4>
+                <h4>Lời mời đang chờ</h4>
                 {requestsLoading ? (
-                  <p className="empty-message">Dang tai loi moi...</p>
+                  <p className="empty-message">Đang tải lời mời...</p>
                 ) : requestsError ? (
                   <p className="empty-message">{requestsError}</p>
                 ) : incoming.length === 0 ? (
                   <p className="empty-message">
-                    Chua co loi moi moi. Hay gioi thieu ban than de ket noi.
+                    Chưa có lời mời mới. Hãy giới thiệu bản thân để kết nối.
                   </p>
                 ) : (
                   <ul>
@@ -133,14 +133,14 @@ export default function Topbar({
                             className="button primary"
                             onClick={() => acceptAndClose(item.id)}
                           >
-                            Chap nhan
+                            Chấp nhận
                           </button>
                           <button
                             type="button"
                             className="button ghost"
                             onClick={() => rejectAndClose(item.id)}
                           >
-                            Bo qua
+                            Bỏ qua
                           </button>
                         </div>
                       </li>
@@ -150,12 +150,12 @@ export default function Topbar({
               </section>
 
               <section>
-                <h4>Da gui</h4>
+                <h4>Đã gửi</h4>
                 {requestsLoading ? (
-                  <p className="empty-message">Dang tai...</p>
+                  <p className="empty-message">Đang tải...</p>
                 ) : outgoing.length === 0 ? (
                   <p className="empty-message">
-                    Ban chua gui loi moi nao gan day.
+                    Bạn chưa gửi lời mời nào gần đây.
                   </p>
                 ) : (
                   <ul>
@@ -163,7 +163,7 @@ export default function Topbar({
                       <li key={item.id}>
                         <div>
                           <strong>{item.user.name}</strong>
-                          <span>Dang cho phan hoi</span>
+                          <span>Đang chờ phản hồi</span>
                         </div>
                         <div className="friends-menu-actions">
                           <button
@@ -171,7 +171,7 @@ export default function Topbar({
                             className="button ghost"
                             onClick={() => cancelAndClose(item.id)}
                           >
-                            Huy loi moi
+                            Hủy lời mời
                           </button>
                         </div>
                       </li>
@@ -181,14 +181,14 @@ export default function Topbar({
               </section>
 
               <section>
-                <h4>Ban be</h4>
+                <h4>Bạn bè</h4>
                 {friendsLoading ? (
-                  <p className="empty-message">Dang tai danh sach ban be...</p>
+                  <p className="empty-message">Đang tải danh sách bạn bè...</p>
                 ) : friendsError ? (
                   <p className="empty-message">{friendsError}</p>
                 ) : friendList.length === 0 ? (
                   <p className="empty-message">
-                    Ket noi voi mot vai nguoi de mo rong mang luoi.
+                    Kết nối với một vài người để mở rộng mạng lưới.
                   </p>
                 ) : (
                   <ul>
@@ -202,7 +202,7 @@ export default function Topbar({
                     ))}
                     {friendList.length > 6 && (
                       <li className="friends-menu-note">
-                        +{friendList.length - 6} ban be khac
+                        +{friendList.length - 6} bạn bè khác
                       </li>
                     )}
                   </ul>
@@ -221,7 +221,7 @@ export default function Topbar({
         </div>
 
         <button type="button" className="button ghost" onClick={onLogout}>
-          Dang xuat
+          Đăng xuất
         </button>
       </div>
     </header>

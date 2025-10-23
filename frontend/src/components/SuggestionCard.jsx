@@ -22,13 +22,13 @@ const reasonLabels = (suggestion) => {
   const labels = [];
   const strategies = suggestion.strategies || [];
   if (strategies.includes("mutual")) {
-    labels.push("Goi y tu ban chung");
+    labels.push("Gợi ý từ bạn chung");
   }
   if ((suggestion.sharedInterests || []).length > 0) {
-    labels.push("So thich tuong dong");
+    labels.push("Sở thích tương đồng");
   }
   if (strategies.includes("global") && labels.length === 0) {
-    labels.push("Thanh vien noi bat tren he thong");
+    labels.push("Thành viên nổi bật trên hệ thống");
   }
   return labels;
 };
@@ -93,7 +93,7 @@ export default function SuggestionCard({ suggestion, onAdd, onDismiss }) {
           )}
           <li>
             <Icon path={ICONS.people} />
-            {mutualCount} ban chung
+            {mutualCount} bạn chung
             {mutualPreview && <small> ({mutualPreview})</small>}
           </li>
         </ul>
@@ -120,7 +120,7 @@ export default function SuggestionCard({ suggestion, onAdd, onDismiss }) {
           onClick={handleAdd}
           disabled={submitting}
         >
-          {submitting ? "Dang gui..." : "Ket ban"}
+          {submitting ? "Đang gửi..." : "Kết bạn"}
         </button>
         <button
           type="button"
@@ -128,7 +128,7 @@ export default function SuggestionCard({ suggestion, onAdd, onDismiss }) {
           onClick={handleDismiss}
           disabled={submitting}
         >
-          Bo qua
+          Bỏ qua
         </button>
       </footer>
     </article>
