@@ -187,7 +187,7 @@ router.post("/suggestions/dismiss", async (req, res) => {
   const { targetId } = req.body;
   if (!targetId) {
     return res.status(400).json({
-      error: "Vui long cung cap ma nguoi dung can xu ly.",
+      error: "Vui lòng cung cấp mã người dùng cần xử lý.",
     });
   }
 
@@ -372,7 +372,7 @@ router.post("/requests", async (req, res) => {
   if (!targetId) {
     return res
       .status(400)
-      .json({ error: "Vui long chon nguoi dung can gui loi moi." });
+      .json({ error: "Vui lòng chọn người dùng cần gửi lời mời." });
   }
 
   const session = driver.session();
@@ -593,12 +593,33 @@ router.get("/insights", async (req, res) => {
         AND NOT (me)-[:DISMISSED]->(candidate)
       WITH me, friends, friendCount, incomingCount, outgoingCount, count(DISTINCT candidate) AS suggestionCount
 
+      OPTIONAL MATCH (me)-[:MEMBER_OF]->(group:Group)
+      WITH me, friends, friendCount, incomingCount, outgoingCount, suggestionCount,
+           collect(DISTINCT group) AS myGroups
+
+      OPTIONAL MATCH (me)-[:POSTED]->(myPost:Post)
+      WITH me, friends, friendCount, incomingCount, outgoingCount, suggestionCount, myGroups,
+           count(DISTINCT myPost) AS postCount
+
+      OPTIONAL MATCH (me)-[:FRIEND_WITH]->(:User)-[:POSTED]->(friendPost:Post)
+      WITH friends,
+           friendCount,
+           incomingCount,
+           outgoingCount,
+           suggestionCount,
+           myGroups,
+           postCount,
+           collect(coalesce(friendPost.topics, [])) AS friendPostTopics
+
       RETURN friendCount,
              incomingCount,
              outgoingCount,
              suggestionCount,
+             size(myGroups) AS groupCount,
+             postCount,
              [friend IN friends WHERE friend.city IS NOT NULL | friend.city] AS friendCities,
-             [friend IN friends | coalesce(friend.interests, [])] AS friendInterests
+             [friend IN friends | coalesce(friend.interests, [])] AS friendInterests,
+             friendPostTopics
       `,
       { email: req.user.email }
     );
@@ -609,20 +630,37 @@ router.get("/insights", async (req, res) => {
         incomingCount: 0,
         outgoingCount: 0,
         suggestionCount: 0,
+        groupCount: 0,
+        postCount: 0,
         topCities: [],
         topInterests: [],
+        topPostTopics: [],
       });
     }
 
     const record = result.records[0];
-    const friendCount = record.get("friendCount").toInt();
-    const incomingCount = record.get("incomingCount").toInt();
-    const outgoingCount = record.get("outgoingCount").toInt();
-    const suggestionCount = record.get("suggestionCount").toInt();
+    const toNumber = (value) =>
+      typeof value?.toNumber === "function"
+        ? value.toNumber()
+        : typeof value?.toInt === "function"
+        ? value.toInt()
+        : Number(value || 0);
+
+    const friendCount = toNumber(record.get("friendCount"));
+    const incomingCount = toNumber(record.get("incomingCount"));
+    const outgoingCount = toNumber(record.get("outgoingCount"));
+    const suggestionCount = toNumber(record.get("suggestionCount"));
+    const groupCount = toNumber(record.get("groupCount"));
+    const postCount = toNumber(record.get("postCount"));
     const friendCities = record.get("friendCities") || [];
     const friendInterests = record.get("friendInterests") || [];
+    const friendPostTopics = record.get("friendPostTopics") || [];
 
     const flatInterests = friendInterests
+      .reduce((all, arr) => all.concat(arr || []), [])
+      .filter(Boolean);
+
+    const flatTopics = friendPostTopics
       .reduce((all, arr) => all.concat(arr || []), [])
       .filter(Boolean);
 
@@ -631,8 +669,11 @@ router.get("/insights", async (req, res) => {
       incomingCount,
       outgoingCount,
       suggestionCount,
+      groupCount,
+      postCount,
       topCities: topOccurrences(friendCities, 3),
       topInterests: topOccurrences(flatInterests, 3),
+      topPostTopics: topOccurrences(flatTopics, 3),
     });
   } catch (err) {
     console.error("Failed to load network insights:", err);

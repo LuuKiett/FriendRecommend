@@ -7,7 +7,7 @@ export function authMiddleware(req, res, next) {
   if (!token) {
     return res
       .status(401)
-      .json({ error: "Thieu token xac thuc. Vui long dang nhap lai." });
+      .json({ error: "Thiếu token xác thực. Vui lòng đăng nhập lại." });
   }
 
   try {

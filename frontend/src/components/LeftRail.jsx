@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 const mutualOptions = [
   { value: 0, label: "Tất cả" },
@@ -22,6 +22,11 @@ export default function LeftRail({
   searchLoading = false,
   searchCount = 0,
   insights,
+  groups = [],
+  onCreateGroup,
+  creatingGroup = false,
+  onLeaveGroup,
+  pendingGroups,
 }) {
   const handleSelect = (field) => (event) => {
     const { value } = event.target;
@@ -33,6 +38,23 @@ export default function LeftRail({
   };
 
   const trimmedSearch = (searchTerm || "").trim();
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [groupDesc, setGroupDesc] = useState("");
+
+  const handleSubmitGroup = async (event) => {
+    event.preventDefault();
+    if (!onCreateGroup) return;
+    const result = await onCreateGroup({
+      name: groupName,
+      description: groupDesc,
+    });
+    if (result?.success) {
+      setGroupName("");
+      setGroupDesc("");
+      setShowGroupForm(false);
+    }
+  };
 
   return (
     <aside className="left-rail">
@@ -165,6 +187,88 @@ export default function LeftRail({
             Chỉ hiển thị sở thích trùng khớp
           </label>
         </div>
+      </section>
+
+      <section className="side-card group-membership-card">
+        <header className="card-header">
+          <h3>Hội nhóm của bạn</h3>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => setShowGroupForm((value) => !value)}
+          >
+            {showGroupForm ? "Đóng" : "Tạo nhóm"}
+          </button>
+        </header>
+
+        {showGroupForm && (
+          <form className="group-form" onSubmit={handleSubmitGroup}>
+            <label>
+              Tên nhóm
+              <input
+                type="text"
+                value={groupName}
+                onChange={(event) => setGroupName(event.target.value)}
+                placeholder="Cộng đồng nghiên cứu dữ liệu..."
+                minLength={3}
+                required
+              />
+            </label>
+            <label>
+              Mô tả ngắn
+              <textarea
+                rows={2}
+                value={groupDesc}
+                onChange={(event) => setGroupDesc(event.target.value)}
+                placeholder="Giới thiệu ngắn gọn mục tiêu của nhóm"
+              />
+            </label>
+            <button
+              type="submit"
+              className="button primary"
+              disabled={creatingGroup}
+            >
+              {creatingGroup ? "Đang tạo..." : "Tạo nhóm mới"}
+            </button>
+          </form>
+        )}
+
+        {groups.length === 0 ? (
+          <p className="empty-message">
+            Tham gia hoặc tạo nhóm để cập nhật tin tức từ cộng đồng của bạn.
+          </p>
+        ) : (
+          <ul className="group-list">
+            {groups.map((item) => {
+              const groupId = item.group?.id;
+              const isPending = pendingGroups?.has(groupId);
+              return (
+                <li key={groupId} className="group-list__item">
+                  <div>
+                    <strong>{item.group?.name}</strong>
+                    <p>
+                      {item.memberCount} thành viên •{" "}
+                      {item.membership?.role === "owner"
+                        ? "Quản trị viên"
+                        : "Thành viên"}
+                    </p>
+                  </div>
+                  {onLeaveGroup && (
+                    <button
+                      type="button"
+                      className="button ghost"
+                      disabled={isPending}
+                      title="Rời nhóm"
+                      onClick={() => onLeaveGroup(groupId)}
+                    >
+                      {isPending ? "Đang rời..." : "Rời nhóm"}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </aside>
   );

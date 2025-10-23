@@ -5,11 +5,14 @@ import LeftRail from "../components/LeftRail";
 import RightRail from "../components/RightRail";
 import SuggestionPanel from "../components/SuggestionPanel";
 import SearchResultsPanel from "../components/SearchResultsPanel";
+import PostFeed from "../components/PostFeed";
 import useFriendSuggestions from "../hooks/useFriendSuggestions";
 import useFriendRequests from "../hooks/useFriendRequests";
 import useNetworkInsights from "../hooks/useNetworkInsights";
 import useFriendSearch from "../hooks/useFriendSearch";
 import useFriendList from "../hooks/useFriendList";
+import usePostFeed from "../hooks/usePostFeed";
+import useGroups from "../hooks/useGroups";
 import { api } from "../api";
 
 const defaultFilters = {
@@ -88,6 +91,30 @@ export default function Home() {
     dismissSuggestion,
     lastAction,
   } = useFriendSuggestions(suggestionFilters, { limit: 24 });
+
+  const {
+    feed,
+    loading: feedLoading,
+    error: feedError,
+    refresh: refreshFeed,
+    createPost,
+    creating: creatingPost,
+    toggleLike: toggleFeedLike,
+    likesInFlight: postLikesInFlight,
+  } = usePostFeed({ limit: 30 });
+
+  const {
+    mine: myGroups,
+    suggestions: groupSuggestions,
+    loading: groupsLoading,
+    error: groupsError,
+    refresh: refreshGroups,
+    createGroup,
+    creating: creatingGroup,
+    joinGroup,
+    leaveGroup,
+    pending: groupsPending,
+  } = useGroups({ limit: 8 });
 
   const loadProfile = useCallback(async () => {
     setProfileLoading(true);
@@ -198,6 +225,82 @@ export default function Home() {
     }
   };
 
+  const handleCreatePost = useCallback(
+    async (payload) => {
+      const result = await createPost(payload);
+      if (result.success) {
+        setBanner({
+          type: "success",
+          message: "Đã đăng bài viết mới.",
+        });
+        refreshFeed();
+      } else if (result.message) {
+        setBanner({ type: "error", message: result.message });
+      }
+      return result;
+    },
+    [createPost, refreshFeed]
+  );
+
+  const handleToggleLike = useCallback(
+    async (postId, nextState) => {
+      const result = await toggleFeedLike(postId, nextState);
+      if (!result.success && result.message) {
+        setBanner({ type: "error", message: result.message });
+      }
+    },
+    [toggleFeedLike]
+  );
+
+  const handleCreateGroup = useCallback(
+    async (payload) => {
+      const result = await createGroup(payload);
+      if (result.success) {
+        setBanner({
+          type: "success",
+          message: "Đã tạo hội nhóm mới.",
+        });
+        refreshGroups();
+      } else if (result.message) {
+        setBanner({ type: "error", message: result.message });
+      }
+      return result;
+    },
+    [createGroup, refreshGroups]
+  );
+
+  const handleJoinGroup = useCallback(
+    async (groupId) => {
+      const result = await joinGroup(groupId);
+      if (result.success) {
+        setBanner({
+          type: "success",
+          message: "Đã tham gia hội nhóm.",
+        });
+        refreshGroups();
+      } else if (result.message) {
+        setBanner({ type: "error", message: result.message });
+      }
+    },
+    [joinGroup, refreshGroups]
+  );
+
+  const handleLeaveGroup = useCallback(
+    async (groupId) => {
+      const result = await leaveGroup(groupId);
+      if (result.success) {
+        setBanner({
+          type: "info",
+          message: "Bạn đã rời hội nhóm.",
+        });
+        refreshGroups();
+      } else if (result.message) {
+        setBanner({ type: "error", message: result.message });
+      }
+    },
+    [leaveGroup, refreshGroups]
+  );
+
   const handleAcceptRequest = async (requestId) => {
     const result = await acceptRequest(requestId);
     if (result.success) {
@@ -256,6 +359,8 @@ export default function Home() {
     refreshRequests();
     refreshInsights();
     refreshFriends();
+    refreshFeed();
+    refreshGroups();
     triggerSearchRefresh();
   };
 
@@ -319,9 +424,28 @@ export default function Home() {
           searchLoading={searchLoading}
           searchCount={searchResults.length}
           insights={insights}
+          groups={myGroups}
+          onCreateGroup={handleCreateGroup}
+          creatingGroup={creatingGroup}
+          onLeaveGroup={handleLeaveGroup}
+          pendingGroups={groupsPending}
         />
 
         <main className="main-column">
+          <PostFeed
+            profile={profile}
+            feed={feed}
+            loading={feedLoading}
+            error={feedError}
+            onRefresh={refreshFeed}
+            onCreatePost={handleCreatePost}
+            creating={creatingPost}
+            onToggleLike={handleToggleLike}
+            likesInFlight={postLikesInFlight}
+            trendingTopics={insights?.topPostTopics}
+            onSendRequest={(targetId) => handleSendRequest(targetId)}
+          />
+
           <SearchResultsPanel
             query={trimmedSearch}
             active={searchActive}
@@ -358,6 +482,11 @@ export default function Home() {
           onAccept={handleAcceptRequest}
           onReject={handleRejectRequest}
           onCancel={handleCancelRequest}
+          groupSuggestions={groupSuggestions}
+          groupsLoading={groupsLoading}
+          groupsError={groupsError}
+          onJoinGroup={handleJoinGroup}
+          pendingGroups={groupsPending}
         />
       </div>
     </div>

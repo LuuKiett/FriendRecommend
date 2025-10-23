@@ -1,4 +1,5 @@
 import React from "react";
+import GroupSuggestionCard from "./GroupSuggestionCard";
 
 const defaultAvatar =
   "https://api.dicebear.com/7.x/thumbs/svg?seed=request-user";
@@ -116,7 +117,27 @@ export default function RightRail({
   onAccept = () => {},
   onReject = () => {},
   onCancel = () => {},
+  groupSuggestions = [],
+  groupsLoading = false,
+  groupsError = null,
+  onJoinGroup,
+  pendingGroups,
 }) {
+  const groupPending = pendingGroups || new Set();
+
+  const stats = insights
+    ? [
+        { label: "Bạn bè", value: insights.friendCount },
+        { label: "Lời mời đến", value: insights.incomingCount },
+        { label: "Đã gửi", value: insights.outgoingCount },
+        { label: "Gợi ý", value: insights.suggestionCount },
+        { label: "Bài viết đã đăng", value: insights.postCount ?? 0 },
+        { label: "Nhóm tham gia", value: insights.groupCount ?? 0 },
+      ]
+    : [];
+
+  const trendingTopics = insights?.topPostTopics || [];
+
   return (
     <aside className="right-rail">
       <section className="side-card">
@@ -130,10 +151,9 @@ export default function RightRail({
         ) : insights ? (
           <>
             <div className="stat-grid">
-              <StatTile label="Bạn bè" value={insights.friendCount} />
-              <StatTile label="Lời mời đến" value={insights.incomingCount} />
-              <StatTile label="Đã gửi" value={insights.outgoingCount} />
-              <StatTile label="Gợi ý" value={insights.suggestionCount} />
+              {stats.map((stat) => (
+                <StatTile key={stat.label} {...stat} />
+              ))}
             </div>
             <div className="insight-section">
               <h4>Khu vực nổi bật</h4>
@@ -147,6 +167,13 @@ export default function RightRail({
               <ChipList
                 items={insights.topInterests}
                 placeholder="Chưa có thống kê sở thích."
+              />
+            </div>
+            <div className="insight-section">
+              <h4>Chủ đề được quan tâm</h4>
+              <ChipList
+                items={trendingTopics}
+                placeholder="Chưa có dữ liệu chủ đề."
               />
             </div>
           </>
@@ -205,6 +232,34 @@ export default function RightRail({
               )}
             </div>
           </>
+        )}
+      </section>
+
+      <section className="side-card">
+        <header className="card-header">
+          <h3>Gợi ý hội nhóm</h3>
+        </header>
+
+        {groupsLoading ? (
+          <div className="skeleton skeleton-groups" />
+        ) : groupsError ? (
+          <p className="empty-message">{groupsError}</p>
+        ) : groupSuggestions.length === 0 ? (
+          <p className="empty-message">
+            Tạm thời chưa có gợi ý phù hợp. Hãy kết nối thêm bạn bè để mở rộng
+            cộng đồng.
+          </p>
+        ) : (
+          <div className="group-suggestions">
+            {groupSuggestions.map((item) => (
+              <GroupSuggestionCard
+                key={item.group.id || item.group.name}
+                suggestion={item}
+                joining={groupPending.has(item.group.id)}
+                onJoin={onJoinGroup}
+              />
+            ))}
+          </div>
         )}
       </section>
     </aside>
