@@ -13,6 +13,7 @@ import useFriendSearch from "../hooks/useFriendSearch";
 import useFriendList from "../hooks/useFriendList";
 import usePostFeed from "../hooks/usePostFeed";
 import useGroups from "../hooks/useGroups";
+import useSharedInterestSuggestions from "../hooks/useSharedInterestSuggestions";
 import { api } from "../api";
 
 const defaultFilters = {
@@ -55,6 +56,13 @@ export default function Home() {
     error: friendsError,
     refresh: refreshFriends,
   } = useFriendList();
+
+  const {
+    suggestions: sharedInterestSuggestions,
+    loading: sharedInterestLoading,
+    error: sharedInterestError,
+    refresh: refreshSharedInterestSuggestions,
+  } = useSharedInterestSuggestions();
 
   const trimmedSearch = searchTerm.trim();
   const searchState = useFriendSearch(trimmedSearch, {
@@ -202,6 +210,7 @@ export default function Home() {
       });
       refreshRequests();
       refreshSuggestions();
+      refreshSharedInterestSuggestions();
       refreshInsights();
       refreshFriends();
       triggerSearchRefresh();
@@ -218,7 +227,9 @@ export default function Home() {
         message: "Đã ẩn gợi ý khỏi danh sách của bạn.",
       });
       refreshSuggestions();
+      refreshSharedInterestSuggestions();
       refreshInsights();
+      refreshFriends();
       triggerSearchRefresh();
     } else {
       setBanner({ type: "error", message: result.message });
@@ -310,6 +321,7 @@ export default function Home() {
       });
       refreshRequests();
       refreshSuggestions();
+      refreshSharedInterestSuggestions();
       refreshInsights();
       refreshFriends();
       triggerSearchRefresh();
@@ -326,6 +338,7 @@ export default function Home() {
         message: "Đã bỏ qua lời mời.",
       });
       refreshRequests();
+      refreshSharedInterestSuggestions();
       refreshInsights();
       refreshFriends();
       triggerSearchRefresh();
@@ -342,6 +355,7 @@ export default function Home() {
         message: "Đã hủy lời mời kết bạn.",
       });
       refreshRequests();
+      refreshSharedInterestSuggestions();
       refreshInsights();
       refreshFriends();
       triggerSearchRefresh();
@@ -359,6 +373,7 @@ export default function Home() {
     refreshRequests();
     refreshInsights();
     refreshFriends();
+    refreshSharedInterestSuggestions();
     refreshFeed();
     refreshGroups();
     triggerSearchRefresh();
@@ -479,6 +494,11 @@ export default function Home() {
           requests={requests}
           requestsLoading={requestsLoading}
           requestsError={requestsError}
+          sharedInterestSuggestions={sharedInterestSuggestions}
+          sharedInterestLoading={sharedInterestLoading}
+          sharedInterestError={sharedInterestError}
+          onSendRequest={handleSendRequest}
+          onRefreshSharedInterests={refreshSharedInterestSuggestions}
           onAccept={handleAcceptRequest}
           onReject={handleRejectRequest}
           onCancel={handleCancelRequest}
@@ -488,6 +508,7 @@ export default function Home() {
           onJoinGroup={handleJoinGroup}
           pendingGroups={groupsPending}
         />
+
       </div>
     </div>
   );

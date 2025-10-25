@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import GroupSuggestionCard from "./GroupSuggestionCard";
 
 const defaultAvatar =
@@ -107,6 +107,61 @@ const RequestItem = ({
   );
 };
 
+const SharedInterestItem = ({ suggestion, onSendRequest }) => {
+  const [pending, setPending] = useState(false);
+  const shared = (suggestion.sharedInterests || []).slice(0, 4);
+  const mutualPreview = (suggestion.mutualFriends || [])
+    .map((friend) => friend.name)
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(", ");
+
+  const handleSend = async () => {
+    if (!onSendRequest || pending) return;
+    setPending(true);
+    try {
+      await onSendRequest(suggestion.id);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <li className="interest-suggestion">
+      <div className="interest-suggestion__body">
+        <strong>{suggestion.name}</strong>
+        {suggestion.headline && <p>{suggestion.headline}</p>}
+        <div className="request-meta">
+          {suggestion.city && <span>{suggestion.city}</span>}
+          {suggestion.mutualCount > 0 && (
+            <span>
+              {suggestion.mutualCount} bạn chung
+              {mutualPreview ? ` (${mutualPreview})` : ""}
+            </span>
+          )}
+        </div>
+        {shared.length > 0 && (
+          <div className="friend-card__tags">
+            {shared.map((interest) => (
+              <span key={interest} className="chip">
+                {interest}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        className="button primary"
+        onClick={handleSend}
+        disabled={pending}
+      >
+        {pending ? "Đang gửi..." : "Kết bạn"}
+      </button>
+    </li>
+  );
+};
+
 export default function RightRail({
   insights,
   insightsLoading,
@@ -122,21 +177,33 @@ export default function RightRail({
   groupsError = null,
   onJoinGroup,
   pendingGroups,
+  sharedInterestSuggestions = [],
+  sharedInterestLoading = false,
+  sharedInterestError = null,
+  onSendRequest,
+  onRefreshSharedInterests,
 }) {
   const groupPending = pendingGroups || new Set();
 
-  const stats = insights
-    ? [
-        { label: "Bạn bè", value: insights.friendCount },
-        { label: "Lời mời đến", value: insights.incomingCount },
-        { label: "Đã gửi", value: insights.outgoingCount },
-        { label: "Gợi ý", value: insights.suggestionCount },
-        { label: "Bài viết đã đăng", value: insights.postCount ?? 0 },
-        { label: "Nhóm tham gia", value: insights.groupCount ?? 0 },
-      ]
-    : [];
+  const stats = useMemo(() => {
+    if (!insights) return [];
+    return [
+      { label: "Bạn bè", value: insights.friendCount },
+      { label: "Lời mời đến", value: insights.incomingCount },
+      { label: "Đã gửi", value: insights.outgoingCount },
+      { label: "Gợi ý", value: insights.suggestionCount },
+      { label: "Bài viết đã đăng", value: insights.postCount ?? 0 },
+      { label: "Nhóm tham gia", value: insights.groupCount ?? 0 },
+    ];
+  }, [insights]);
 
   const trendingTopics = insights?.topPostTopics || [];
+
+  const handleRefreshInterests = () => {
+    if (typeof onRefreshSharedInterests === "function") {
+      onRefreshSharedInterests();
+    }
+  };
 
   return (
     <aside className="right-rail">
@@ -178,6 +245,53 @@ export default function RightRail({
             </div>
           </>
         ) : null}
+      </section>
+
+      <section className="side-card">
+        <header className="card-header">
+          <h3>Kết nối cùng sở thích</h3>
+          {onRefreshSharedInterests && (
+            <button
+              type="button"
+              className="link-button"
+              onClick={handleRefreshInterests}
+            >
+              Làm mới
+            </button>
+          )}
+        </header>
+
+        {sharedInterestLoading ? (
+          <div className="skeleton skeleton-requests" />
+        ) : sharedInterestError ? (
+          <div className="empty-state">
+            <p>{sharedInterestError}</p>
+            {onRefreshSharedInterests && (
+              <button
+                type="button"
+                className="button primary"
+                onClick={handleRefreshInterests}
+              >
+                Thử lại
+              </button>
+            )}
+          </div>
+        ) : sharedInterestSuggestions.length === 0 ? (
+          <p className="empty-message">
+            Chưa có gợi ý nào dựa trên sở thích. Hãy cập nhật hồ sơ của bạn để
+            nhận thêm đề xuất.
+          </p>
+        ) : (
+          <ul className="interest-suggestion-list">
+            {sharedInterestSuggestions.map((suggestion) => (
+              <SharedInterestItem
+                key={suggestion.id}
+                suggestion={suggestion}
+                onSendRequest={onSendRequest}
+              />
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="side-card">

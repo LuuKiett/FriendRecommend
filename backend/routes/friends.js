@@ -183,6 +183,68 @@ router.get("/suggestions", async (req, res) => {
   }
 });
 
+router.get("/suggestions/interest", async (req, res) => {
+  const session = driver.session();
+  const { limit = 6 } = req.query;
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (me:User {email: $email})
+      WITH me, coalesce(me.interests, []) AS myInterests
+      WHERE size(myInterests) > 0
+      MATCH (candidate:User)
+      WHERE candidate.email <> $email
+        AND NOT (me)-[:FRIEND_WITH]->(candidate)
+        AND NOT (me)-[:REQUESTED]->(candidate)
+        AND NOT (candidate)-[:REQUESTED]->(me)
+        AND NOT (me)-[:DISMISSED]->(candidate)
+      WITH me, candidate,
+           apoc.coll.intersection(myInterests, coalesce(candidate.interests, [])) AS sharedInterests
+      WHERE size(sharedInterests) > 0
+      OPTIONAL MATCH (me)-[:FRIEND_WITH]->(mutual:User)-[:FRIEND_WITH]->(candidate)
+      WITH candidate, sharedInterests,
+           collect(DISTINCT mutual { .name, .email, .avatar }) AS mutualFriends
+      RETURN {
+        id: coalesce(candidate.id, elementId(candidate)),
+        name: candidate.name,
+        email: candidate.email,
+        city: candidate.city,
+        headline: candidate.headline,
+        workplace: candidate.workplace,
+        avatar: candidate.avatar,
+        interests: coalesce(candidate.interests, []),
+        mutualFriends: mutualFriends,
+        mutualCount: size(mutualFriends),
+        sharedInterests: sharedInterests
+      } AS suggestion
+      ORDER BY size(sharedInterests) DESC, size(mutualFriends) DESC, toLower(candidate.name) ASC
+      LIMIT toInteger($limit)
+      `,
+      {
+        email: req.user.email,
+        limit: Number(limit),
+      }
+    );
+
+    const suggestions = mapRecords(result.records, "suggestion").map(
+      (suggestion) => ({
+        ...suggestion,
+        mutualCount: toPlainNumber(suggestion.mutualCount),
+      })
+    );
+
+    res.json(suggestions);
+  } catch (err) {
+    console.error("Failed to load shared interest suggestions:", err);
+    res.status(500).json({
+      error: "Không thể tải gợi ý theo sở thích chung.",
+    });
+  } finally {
+    await session.close();
+  }
+});
+
 router.post("/suggestions/dismiss", async (req, res) => {
   const { targetId } = req.body;
   if (!targetId) {
