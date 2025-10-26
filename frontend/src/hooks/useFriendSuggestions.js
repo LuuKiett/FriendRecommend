@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { api } from "../api";
 
 const initialState = {
@@ -24,34 +24,57 @@ const sanitizeParams = (params) => {
 };
 
 export default function useFriendSuggestions(filters, options = {}) {
+  const { limit = 12, enabled = true } = options;
   const [state, setState] = useState(initialState);
   const [lastAction, setLastAction] = useState(null);
+
+  const resetState = useCallback(() => {
+    setState({ ...initialState });
+    setLastAction(null);
+  }, []);
 
   const fetchSuggestions = useCallback(
     async (override = {}) => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
         const params = sanitizeParams({
-          limit: options.limit ?? 12,
+          limit,
           ...filters,
           ...override,
         });
-        const res = await api.get("/friends/suggestions", { params });
-        setState({ suggestions: res.data, loading: false, error: null });
+        const response = await api.get("/friends/suggestions", { params });
+        setState({ suggestions: response.data, loading: false, error: null });
+        return response.data;
       } catch (error) {
         console.error("Fetch suggestions failed:", error);
         const message =
           error?.response?.data?.error ||
           "Không thể tải danh sách gợi ý. Vui lòng thử lại.";
         setState((prev) => ({ ...prev, loading: false, error: message }));
+        return null;
       }
     },
-    [filters, options.limit]
+    [filters, limit]
   );
 
   useEffect(() => {
+    if (!enabled) {
+      resetState();
+      return;
+    }
     fetchSuggestions();
-  }, [fetchSuggestions]);
+  }, [enabled, fetchSuggestions, resetState]);
+
+  const refresh = useCallback(
+    (override) => {
+      if (!enabled) {
+        resetState();
+        return Promise.resolve(null);
+      }
+      return fetchSuggestions(override);
+    },
+    [enabled, fetchSuggestions, resetState]
+  );
 
   const sendRequest = useCallback(async (targetId, message) => {
     try {
@@ -91,7 +114,7 @@ export default function useFriendSuggestions(filters, options = {}) {
     suggestions: state.suggestions,
     loading: state.loading,
     error: state.error,
-    refresh: fetchSuggestions,
+    refresh,
     sendRequest,
     dismissSuggestion,
     lastAction,

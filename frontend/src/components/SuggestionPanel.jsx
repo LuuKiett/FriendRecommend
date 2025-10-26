@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import SuggestionCard from "./SuggestionCard";
 
 const SkeletonCard = () => (
@@ -28,12 +28,12 @@ const RefreshIcon = () => (
 const buildFilterSummary = (filters, searchTerm) => {
   const chips = [];
   if (filters.mutualMin > 0) {
-    chips.push(`≥ ${filters.mutualMin} bạn chung`);
+    chips.push(`>= ${filters.mutualMin} bạn chung`);
   }
-  if (filters.city !== "all") {
+  if (filters.city && filters.city !== "all") {
     chips.push(`Thành phố: ${filters.city}`);
   }
-  if (filters.interest !== "all") {
+  if (filters.interest && filters.interest !== "all") {
     chips.push(`Sở thích: ${filters.interest}`);
   }
   if (searchTerm) {
@@ -53,24 +53,33 @@ export default function SuggestionPanel({
   lastAction,
   filters,
   searchTerm,
+  searchEnabled,
 }) {
-  const chips = buildFilterSummary(filters, searchTerm);
-  const resultCount = suggestions.length;
+  const chips = searchEnabled ? buildFilterSummary(filters, searchTerm) : [];
+  const resultCount = searchEnabled ? suggestions.length : 0;
   const title = profile
     ? `Gợi ý kết bạn cho ${profile.name}`
     : "Gợi ý kết bạn";
+  const description = searchEnabled
+    ? `${resultCount} gợi ý phù hợp. Làm mới để nhận danh sách khác hoặc điều chỉnh bộ lọc để kết nối chính xác hơn.`
+    : "Nhập ít nhất 2 ký tự trong ô tìm kiếm để hiển thị gợi ý phù hợp với bạn.";
+  const refreshDisabled = !searchEnabled || loading;
 
   return (
     <section className="suggestions-wrapper">
       <header className="suggestions-header">
         <div>
           <h2>{title}</h2>
-          <p>
-            {resultCount} gợi ý phù hợp. Làm mới để nhận danh sách khác
-            hoặc điều chỉnh bộ lọc để kết nối chính xác hơn.
-          </p>
+          <p>{description}</p>
         </div>
-        <button type="button" className="icon-button" onClick={onRefresh}>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={onRefresh}
+          disabled={refreshDisabled}
+          aria-disabled={refreshDisabled}
+          title={refreshDisabled ? "Nhập từ khóa để làm mới gợi ý" : "Làm mới gợi ý"}
+        >
           <RefreshIcon />
         </button>
       </header>
@@ -85,50 +94,71 @@ export default function SuggestionPanel({
         </div>
       )}
 
-      {lastAction?.type === "dismiss" && (
-        <div className="inline-info">
-          Đã ẩn một gợi ý khỏi danh sách của bạn.
-        </div>
-      )}
-      {lastAction?.type === "request" && (
-        <div className="inline-success">
-          Đã gửi lời mời kết bạn thành công.
-        </div>
-      )}
+      {searchEnabled ? (
+        <>
+          {lastAction?.type === "dismiss" && (
+            <div className="inline-info">
+              Đã ẩn một gợi ý khỏi danh sách của bạn.
+            </div>
+          )}
+          {lastAction?.type === "request" && (
+            <div className="inline-success">
+              Đã gửi lời mời kết bạn thành công.
+            </div>
+          )}
 
-      {error ? (
-        <div className="empty-state">
-          <p>{error}</p>
-          <button type="button" className="button primary" onClick={onRefresh}>
-            Thử lại
-          </button>
-        </div>
-      ) : loading ? (
-        <div className="suggestion-grid">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <SkeletonCard key={index} />
-          ))}
-        </div>
-      ) : resultCount === 0 ? (
-        <div className="empty-state">
-          <h3>Danh sách hiện đang trống</h3>
-          <p>
-            Thử nới lỏng bộ lọc hoặc làm mới để xem nhiều gợi ý mới hơn.
-          </p>
-          <button type="button" className="button primary" onClick={onRefresh}>
-            Làm mới gợi ý
-          </button>
-        </div>
+          {error ? (
+            <div className="empty-state">
+              <p>{error}</p>
+              <button
+                type="button"
+                className="button primary"
+                onClick={onRefresh}
+                disabled={loading}
+              >
+                Thử lại
+              </button>
+            </div>
+          ) : loading ? (
+            <div className="suggestion-grid">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <SkeletonCard key={index} />
+              ))}
+            </div>
+          ) : resultCount === 0 ? (
+            <div className="empty-state">
+              <h3>Danh sách hiện đang trống</h3>
+              <p>
+                Điều chỉnh bộ lọc hoặc làm mới để xem thêm gợi ý mới phù hợp với nhu cầu của bạn.
+              </p>
+              <button
+                type="button"
+                className="button primary"
+                onClick={onRefresh}
+                disabled={loading}
+              >
+                Làm mới gợi ý
+              </button>
+            </div>
+          ) : (
+            <div className="suggestion-grid">
+              {suggestions.map((suggestion) => (
+                <SuggestionCard
+                  key={suggestion.id}
+                  suggestion={suggestion}
+                  onAdd={onSendRequest}
+                  onDismiss={onDismiss}
+                />
+              ))}
+            </div>
+          )}
+        </>
       ) : (
-        <div className="suggestion-grid">
-          {suggestions.map((suggestion) => (
-            <SuggestionCard
-              key={suggestion.id}
-              suggestion={suggestion}
-              onAdd={onSendRequest}
-              onDismiss={onDismiss}
-            />
-          ))}
+        <div className="empty-state">
+          <h3>Tìm kiếm để xem gợi ý</h3>
+          <p>
+            Nhập tối thiểu 2 ký tự vào ô "Tìm kiếm bạn bè" ở thanh bên trái để hệ thống phân tích và đề xuất những kết nối phù hợp.
+          </p>
         </div>
       )}
     </section>

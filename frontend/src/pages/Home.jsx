@@ -65,8 +65,9 @@ export default function Home() {
   } = useSharedInterestSuggestions();
 
   const trimmedSearch = searchTerm.trim();
+  const suggestionsEnabled = trimmedSearch.length >= 2;
   const searchState = useFriendSearch(trimmedSearch, {
-    enabled: trimmedSearch.length >= 2,
+    enabled: suggestionsEnabled,
     debounceMs: 350,
     limit: 20,
     refreshKey: searchRefreshIndex,
@@ -98,7 +99,10 @@ export default function Home() {
     sendRequest,
     dismissSuggestion,
     lastAction,
-  } = useFriendSuggestions(suggestionFilters, { limit: 24 });
+  } = useFriendSuggestions(suggestionFilters, {
+    limit: 24,
+    enabled: suggestionsEnabled,
+  });
 
   const {
     feed,
@@ -176,6 +180,7 @@ export default function Home() {
   }, [profile?.interests, suggestions, friends]);
 
   const displaySuggestions = useMemo(() => {
+    if (!suggestionsEnabled) return [];
     if (searchActive || !trimmedSearch) return suggestions;
     const normalized = trimmedSearch.toLowerCase();
     return suggestions.filter((suggestion) => {
@@ -189,7 +194,7 @@ export default function Home() {
         .some((interest) => interest.toLowerCase().includes(normalized));
       return matchName || matchCity || matchHeadline || matchInterest;
     });
-  }, [suggestions, trimmedSearch, searchActive]);
+  }, [suggestionsEnabled, suggestions, trimmedSearch, searchActive]);
 
   const handleFilterChange = (nextFilters) => {
     setFilters((prev) => ({ ...prev, ...nextFilters }));
@@ -483,7 +488,10 @@ export default function Home() {
             onRefresh={refreshSuggestions}
             lastAction={lastAction}
             filters={filters}
-            searchTerm={searchActive ? "" : searchTerm}
+            searchTerm={
+              suggestionsEnabled && !searchActive ? trimmedSearch : ""
+            }
+            searchEnabled={suggestionsEnabled}
           />
         </main>
 

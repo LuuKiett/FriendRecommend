@@ -138,6 +138,64 @@ const companies = [
   "CAFEX",
 ];
 
+const corporateDomains = {
+  Viettel: "viettel.com.vn",
+  "FPT Software": "fpt.com.vn",
+  VNPT: "vnpt.vn",
+  VNG: "vng.com.vn",
+  MoMo: "momo.vn",
+  Grab: "grab.com",
+  Shopee: "shopee.vn",
+  "Be Group": "be.com.vn",
+  VinAI: "vinai.io",
+  Tiki: "tiki.vn",
+  NashTech: "nashtechglobal.com",
+  "KMS Technology": "kms-technology.com",
+  "DEK Technologies": "dektech.com.au",
+  "Axon Active": "axonactive.com",
+  MBBank: "mbbank.com.vn",
+  Techcombank: "techcombank.com.vn",
+  TPBank: "tpb.vn",
+  VPBank: "vpbank.com.vn",
+  Zalo: "zalo.me",
+  TikiNgon: "tikingon.vn",
+  "One Mount": "onemount.com",
+  Sendo: "sendo.vn",
+  Haravan: "haravan.com",
+  CMC: "cmc.com.vn",
+  Vietcombank: "vcb.com.vn",
+  Ahamove: "ahamove.com",
+  GHTK: "ghtk.vn",
+  VNExpress: "vnexpress.net",
+  CAFEX: "cafex.vn",
+};
+
+const personalEmailDomains = [
+  "gmail.com",
+  "outlook.com",
+  "yahoo.com",
+  "hotmail.com",
+  "icloud.com",
+  "proton.me",
+  "zoho.com",
+];
+
+const communityEmailDomains = [
+  "viettech.vn",
+  "datadev.vn",
+  "devhub.vn",
+  "saigonlab.vn",
+  "hanoiworks.vn",
+  "cloudops.vn",
+];
+
+const fallbackEmailDomains = [
+  ...personalEmailDomains,
+  ...communityEmailDomains,
+];
+
+const emailAllocations = new Map();
+
 const roles = [
   "Kỹ sư Dữ liệu",
   "Nhà khoa học dữ liệu",
@@ -299,10 +357,46 @@ const now = new Date(Date.now() - timezoneOffsetMs);
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
 
+const stripDiacritics = (value = "") =>
+  value
+    ? value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+    : "";
+
+const slugSegment = (value) =>
+  stripDiacritics(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/\.+/g, ".")
+    .replace(/^\.+|\.+$/g, "");
+
 const randomInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
 const randomChoice = (array) => array[randomInt(0, array.length - 1)];
+
+const pickEmailDomain = (company) =>
+  corporateDomains[company] || randomChoice(fallbackEmailDomains);
+
+const buildEmailAddress = (firstName, lastName, company, index) => {
+  const localBase = [firstName, lastName]
+    .map((segment) => slugSegment(segment))
+    .filter(Boolean)
+    .join(".");
+  const fallbackBase = `user${(index + 1).toString().padStart(4, "0")}`;
+  const localPart = localBase || fallbackBase;
+  const domain = pickEmailDomain(company);
+  const key = `${localPart}@${domain}`;
+  const existing = emailAllocations.get(key) || 0;
+  emailAllocations.set(key, existing + 1);
+  if (existing === 0) {
+    return key;
+  }
+  return `${localPart}${existing + 1}@${domain}`;
+};
 
 const randomSubset = (array, min, max) => {
   if (!array.length) return [];
@@ -331,9 +425,7 @@ const randomDateBetween = (start, end) => {
 };
 
 const slugify = (value) =>
-  value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+  stripDiacritics(value)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "")
     .slice(0, 40);
@@ -402,13 +494,11 @@ const users = [];
 for (let i = 0; i < config.userCount; i += 1) {
   const first = randomChoice(firstNames);
   const last = randomChoice(lastNames);
+  const company = randomChoice(companies);
   const name = `${first} ${last}`;
-  const sanitizedEmail =
-    slugify(`${first}.${last}`) || `user${i.toString().padStart(4, "0")}`;
-  const email = `${sanitizedEmail}${i}@demo.neo4j`;
+  const email = buildEmailAddress(first, last, company, i);
   const city = randomChoice(cities);
   const role = randomChoice(roles);
-  const company = randomChoice(companies);
   const interests = randomSubset(interestPool, 3, 6);
   const createdAt = randomPastDate(920);
   const lastActive = randomDateBetween(createdAt, now);
