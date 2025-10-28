@@ -188,6 +188,50 @@ export default function useGroups(options = {}) {
     }
   }, [markPending]);
 
+  const getGroupDetail = useCallback(async (groupId) => {
+    try {
+      const res = await api.get(`/groups/${groupId}`);
+      return { success: true, data: res.data };
+    } catch (err) {
+      const message =
+        err?.response?.data?.error || "Không thể tải thông tin hội nhóm.";
+      return { success: false, message };
+    }
+  }, []);
+
+  const getSimilarGroups = useCallback(async (groupId, limit = 8) => {
+    try {
+      const res = await api.get(`/groups/${groupId}/similar`, {
+        params: { limit },
+      });
+      return { success: true, data: res.data };
+    } catch (err) {
+      const message =
+        err?.response?.data?.error || "Không thể tải gợi ý hội nhóm.";
+      return { success: false, message };
+    }
+  }, []);
+
+  const getGroupMembers = useCallback(async (groupId, { limit = 30, skip = 0 } = {}) => {
+    try {
+      const res = await api.get(`/groups/${groupId}/members`, { params: { limit, skip } });
+      return { success: true, data: res.data };
+    } catch (err) {
+      const message = err?.response?.data?.error || "Không thể tải thành viên nhóm.";
+      return { success: false, message };
+    }
+  }, []);
+
+  const getGroupMemberSuggestions = useCallback(async (groupId, limit = 12) => {
+    try {
+      const res = await api.get(`/groups/${groupId}/member-suggestions`, { params: { limit } });
+      return { success: true, data: res.data };
+    } catch (err) {
+      const message = err?.response?.data?.error || "Không thể gợi ý kết nối từ nhóm.";
+      return { success: false, message };
+    }
+  }, []);
+
   const pending = useMemo(() => new Set(pendingGroups), [pendingGroups]);
 
   return {
@@ -201,5 +245,9 @@ export default function useGroups(options = {}) {
     joinGroup,
     leaveGroup,
     pending,
+    getGroupDetail,
+    getSimilarGroups,
+    getGroupMembers,
+    getGroupMemberSuggestions,
   };
 }

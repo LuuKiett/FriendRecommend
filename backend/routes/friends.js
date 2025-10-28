@@ -109,8 +109,16 @@ router.get("/suggestions", async (req, res) => {
       WITH me, candidate, collect(DISTINCT strategy) AS strategies
       OPTIONAL MATCH (me)-[:FRIEND_WITH]->(mutual:User)-[:FRIEND_WITH]->(candidate)
       WITH me, candidate, strategies, COLLECT(DISTINCT mutual { .name, .email, .avatar }) AS mutualFriends
+      OPTIONAL MATCH (me)-[:HAS_INTEREST]->(mi:Interest)
+      OPTIONAL MATCH (candidate)-[:HAS_INTEREST]->(ci:Interest)
       WITH me, candidate, strategies, mutualFriends,
-           apoc.coll.intersection(coalesce(me.interests, []), coalesce(candidate.interests, [])) AS sharedInterests
+           [i IN coalesce(me.interests, []) | toLower(i)] + collect(DISTINCT toLower(coalesce(mi.name, ""))) AS myIntsRaw,
+           [i IN coalesce(candidate.interests, []) | toLower(i)] + collect(DISTINCT toLower(coalesce(ci.name, ""))) AS candIntsRaw
+      WITH candidate, strategies, mutualFriends,
+           [x IN myIntsRaw WHERE x IS NOT NULL AND trim(x) <> ""] AS myInts,
+           [y IN candIntsRaw WHERE y IS NOT NULL AND trim(y) <> ""] AS candInts
+      WITH candidate, strategies, mutualFriends,
+           [z IN myInts WHERE z IN candInts] AS sharedInterests
       WHERE size(mutualFriends) >= toInteger($mutualMin)
         AND ($city IS NULL OR candidate.city = $city)
         AND (
@@ -191,16 +199,25 @@ router.get("/suggestions/interest", async (req, res) => {
     const result = await session.run(
       `
       MATCH (me:User {email: $email})
-      WITH me, coalesce(me.interests, []) AS myInterests
-      WHERE size(myInterests) > 0
+      OPTIONAL MATCH (me)-[:HAS_INTEREST]->(mi:Interest)
+      WITH me,
+           [i IN coalesce(me.interests, []) WHERE i IS NOT NULL] + collect(DISTINCT toLower(coalesce(mi.name, ''))) AS myInterestsRaw
+      WITH me, [i IN myInterestsRaw WHERE i IS NOT NULL AND trim(i) <> ''] AS myInterests
+      // Fallback: if no interests on profile, infer from friends' HAS_INTEREST
+      OPTIONAL MATCH (me)-[:FRIEND_WITH]->(:User)-[:HAS_INTEREST]->(fi:Interest)
+      WITH me, CASE WHEN size(myInterests) = 0 THEN collect(DISTINCT toLower(fi.name)) ELSE myInterests END AS myInterests
       MATCH (candidate:User)
       WHERE candidate.email <> $email
         AND NOT (me)-[:FRIEND_WITH]->(candidate)
         AND NOT (me)-[:REQUESTED]->(candidate)
         AND NOT (candidate)-[:REQUESTED]->(me)
         AND NOT (me)-[:DISMISSED]->(candidate)
-      WITH me, candidate,
-           apoc.coll.intersection(myInterests, coalesce(candidate.interests, [])) AS sharedInterests
+      OPTIONAL MATCH (candidate)-[:HAS_INTEREST]->(ci:Interest)
+      WITH me, candidate, myInterests,
+           [i IN coalesce(candidate.interests, []) WHERE i IS NOT NULL] + collect(DISTINCT toLower(coalesce(ci.name, ''))) AS candInterestsRaw
+      WITH me, candidate, myInterests, [i IN candInterestsRaw WHERE i IS NOT NULL AND trim(i) <> ''] AS candInterests
+      WITH me, candidate, myInterests, candInterests,
+           [x IN myInterests WHERE x IN candInterests] AS sharedInterests
       WHERE size(sharedInterests) > 0
       OPTIONAL MATCH (me)-[:FRIEND_WITH]->(mutual:User)-[:FRIEND_WITH]->(candidate)
       WITH candidate, sharedInterests,
@@ -259,7 +276,7 @@ router.post("/suggestions/dismiss", async (req, res) => {
       `
       MATCH (me:User {email: $email})
       MATCH (target:User)
-      WHERE target.id = $targetId OR target.email = $targetId
+      WHERE target.id = $targetId OR target.email = $targetId OR elementId(target) = $targetId OR target.userId = $targetId
       MERGE (me)-[dismiss:DISMISSED]->(target)
       ON CREATE SET dismiss.createdAt = datetime()
       RETURN target.name AS name
@@ -299,28 +316,41 @@ router.get("/search", async (req, res) => {
       MATCH (me:User {email: $email})
       MATCH (user:User)
       WHERE me <> user
-        AND (
-          toLower(user.name) CONTAINS term
-          OR (user.city IS NOT NULL AND toLower(user.city) CONTAINS term)
-          OR (user.headline IS NOT NULL AND toLower(user.headline) CONTAINS term)
-          OR (user.workplace IS NOT NULL AND toLower(user.workplace) CONTAINS term)
-          OR ANY(interest IN coalesce(user.interests, []) WHERE toLower(interest) CONTAINS term)
-        )
+      WITH me, user, term,
+           toLower(coalesce(user.name, '')) AS nameLower,
+           toLower(coalesce(user.city, '')) AS cityLower,
+           toLower(coalesce(user.headline, '')) AS headlineLower,
+           toLower(coalesce(user.workplace, '')) AS workplaceLower,
+           toLower(coalesce(user.email, '')) AS emailLower,
+           [interest IN coalesce(user.interests, []) | toLower(interest)] AS interestLower
+      WITH me, user, term, nameLower, cityLower, headlineLower, workplaceLower, emailLower, interestLower,
+           CASE WHEN nameLower STARTS WITH term THEN 20 ELSE 0 END
+           + CASE WHEN emailLower CONTAINS term THEN 8 ELSE 0 END
+           + CASE WHEN nameLower CONTAINS term THEN 10 ELSE 0 END
+           + CASE WHEN cityLower CONTAINS term THEN 6 ELSE 0 END
+           + CASE WHEN headlineLower CONTAINS term THEN 4 ELSE 0 END
+           + CASE WHEN workplaceLower CONTAINS term THEN 3 ELSE 0 END
+           + CASE WHEN ANY(i IN interestLower WHERE i CONTAINS term) THEN 5 ELSE 0 END AS baseScore
+      WHERE baseScore > 0
       OPTIONAL MATCH (me)-[friend:FRIEND_WITH]->(user)
       OPTIONAL MATCH (me)-[out:REQUESTED]->(user)
       OPTIONAL MATCH (user)-[incoming:REQUESTED]->(me)
       OPTIONAL MATCH (me)-[:FRIEND_WITH]->(mutual:User)-[:FRIEND_WITH]->(user)
-      WITH me, user, friend, out, incoming, COLLECT(DISTINCT mutual) AS mutualNodes
+      WITH me, user, friend, out, incoming, COLLECT(DISTINCT mutual) AS mutualNodes, baseScore
       WITH me, user, friend, out, incoming, mutualNodes,
-           apoc.coll.intersection(coalesce(me.interests, []), coalesce(user.interests, [])) AS sharedInterests
-      WITH friend, out, incoming, mutualNodes, user, sharedInterests,
+           [i IN coalesce(me.interests, []) WHERE i IN coalesce(user.interests, [])] AS sharedInterests,
+           baseScore
+      WITH friend, out, incoming, mutualNodes, user, sharedInterests, baseScore,
            CASE
              WHEN friend IS NOT NULL THEN "friend"
              WHEN incoming IS NOT NULL THEN "incoming"
              WHEN out IS NOT NULL THEN "outgoing"
              ELSE "none"
            END AS status
-      WITH {
+      WITH baseScore
+           + CASE WHEN size(mutualNodes) >= 5 THEN 10 WHEN size(mutualNodes) >= 2 THEN 6 WHEN size(mutualNodes) > 0 THEN 3 ELSE 0 END
+           + CASE WHEN size(sharedInterests) >= 3 THEN 6 WHEN size(sharedInterests) > 0 THEN 3 ELSE 0 END AS score,
+      {
         id: coalesce(user.id, elementId(user)),
         name: user.name,
         email: user.email,
@@ -348,22 +378,16 @@ router.get("/search", async (req, res) => {
           ELSE NULL
         END
       } AS result,
-      CASE
-        WHEN status = "friend" THEN 0
-        WHEN status = "incoming" THEN 1
-        WHEN status = "outgoing" THEN 2
-        ELSE 3
-      END AS statusOrder,
+      CASE WHEN status = "friend" THEN 0 WHEN status = "incoming" THEN 1 WHEN status = "outgoing" THEN 2 ELSE 3 END AS statusOrder,
       size(mutualNodes) AS mutualOrder,
-      CASE WHEN size(mutualNodes) > 0 THEN 0 ELSE 1 END AS mutualPriority,
       toLower(user.name) AS nameOrder
       RETURN result
-      ORDER BY mutualPriority, statusOrder, mutualOrder DESC, nameOrder ASC
+      ORDER BY score DESC, statusOrder ASC, mutualOrder DESC, nameOrder ASC
       LIMIT toInteger($limit)
       `,
       {
         email: req.user.email,
-        term: term.toLowerCase(),
+        term,
         limit: Number(limit),
       }
     );
@@ -471,7 +495,7 @@ router.post("/requests", async (req, res) => {
         .json({ error: "Không tìm thấy người dùng tương ứng." });
     }
 
-    if (meNode.elementId === targetNode.elementId) {
+    if ((meNode.properties?.email || meNode.email) === (targetNode.properties?.email || targetNode.email)) {
       return res
         .status(400)
         .json({ error: "Ban khong the gui loi moi cho chinh minh." });
@@ -491,8 +515,8 @@ router.post("/requests", async (req, res) => {
       await session.executeWrite(async (tx) => {
         await tx.run(
           `
-          MATCH (me:User {email: $email})<-[req:REQUESTED]-(other:User)
-          WHERE req.id = $requestId OR elementId(req) = $requestId
+        MATCH (me:User {email: $email})<-[req:REQUESTED]-(other:User)
+        WHERE req.id = $requestId OR elementId(req) = $requestId
           DELETE req
           MERGE (me)-[:FRIEND_WITH]->(other)
           MERGE (other)-[:FRIEND_WITH]->(me)
@@ -515,7 +539,7 @@ router.post("/requests", async (req, res) => {
         `
         MATCH (me:User {email: $email})
         MATCH (target:User)
-        WHERE target.id = $targetId OR target.email = $targetId
+        WHERE target.id = $targetId OR target.email = $targetId OR elementId(target) = $targetId OR target.userId = $targetId
         MERGE (me)-[req:REQUESTED]->(target)
         ON CREATE SET req.id = $id,
                       req.createdAt = datetime(),

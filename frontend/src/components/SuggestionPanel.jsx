@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import SuggestionCard from "./SuggestionCard";
 
 const SkeletonCard = () => (
@@ -28,7 +28,7 @@ const RefreshIcon = () => (
 const buildFilterSummary = (filters, searchTerm) => {
   const chips = [];
   if (filters.mutualMin > 0) {
-    chips.push(`>= ${filters.mutualMin} bạn chung`);
+    chips.push(`≥ ${filters.mutualMin} bạn chung`);
   }
   if (filters.city && filters.city !== "all") {
     chips.push(`Thành phố: ${filters.city}`);
@@ -37,7 +37,7 @@ const buildFilterSummary = (filters, searchTerm) => {
     chips.push(`Sở thích: ${filters.interest}`);
   }
   if (searchTerm) {
-    chips.push(`Từ khóa: "${searchTerm}"`);
+    chips.push(`Từ khóa: “${searchTerm}”`);
   }
   return chips;
 };
@@ -57,6 +57,7 @@ export default function SuggestionPanel({
 }) {
   const chips = searchEnabled ? buildFilterSummary(filters, searchTerm) : [];
   const resultCount = searchEnabled ? suggestions.length : 0;
+
   const title = profile
     ? `Gợi ý kết bạn cho ${profile.name}`
     : "Gợi ý kết bạn";
@@ -78,7 +79,11 @@ export default function SuggestionPanel({
           onClick={onRefresh}
           disabled={refreshDisabled}
           aria-disabled={refreshDisabled}
-          title={refreshDisabled ? "Nhập từ khóa để làm mới gợi ý" : "Làm mới gợi ý"}
+          title={
+            refreshDisabled
+              ? "Nhập từ khóa để làm mới gợi ý"
+              : "Làm mới gợi ý"
+          }
         >
           <RefreshIcon />
         </button>
@@ -129,7 +134,8 @@ export default function SuggestionPanel({
             <div className="empty-state">
               <h3>Danh sách hiện đang trống</h3>
               <p>
-                Điều chỉnh bộ lọc hoặc làm mới để xem thêm gợi ý mới phù hợp với nhu cầu của bạn.
+                Điều chỉnh bộ lọc hoặc làm mới để xem thêm gợi ý mới phù hợp
+                với nhu cầu của bạn.
               </p>
               <button
                 type="button"
@@ -157,10 +163,13 @@ export default function SuggestionPanel({
         <div className="empty-state">
           <h3>Tìm kiếm để xem gợi ý</h3>
           <p>
-            Nhập tối thiểu 2 ký tự vào ô "Tìm kiếm bạn bè" ở thanh bên trái để hệ thống phân tích và đề xuất những kết nối phù hợp.
+            Nhập tối thiểu 2 ký tự vào ô “Tìm kiếm bạn bè” ở thanh bên trái để
+            hệ thống phân tích và đề xuất những kết nối phù hợp.
           </p>
         </div>
       )}
     </section>
   );
 }
+
+

@@ -117,7 +117,7 @@ export default function Register() {
             name="name"
             value={form.name}
             onChange={handleChange}
-            placeholder="Nguyen Minh An"
+            placeholder="Nhập họ tên của bạn"
             required
           />
 
@@ -128,7 +128,7 @@ export default function Register() {
             type="email"
             value={form.email}
             onChange={handleChange}
-            placeholder="nhanvien@example.com"
+            placeholder="youremail@gmail.com"
             required
           />
 

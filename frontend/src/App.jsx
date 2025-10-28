@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
+import Group from "./pages/Group";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/groups/:groupId" element={<PrivateRoute><Group /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
   );

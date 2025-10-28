@@ -14,6 +14,7 @@ import useFriendList from "../hooks/useFriendList";
 import usePostFeed from "../hooks/usePostFeed";
 import useGroups from "../hooks/useGroups";
 import useSharedInterestSuggestions from "../hooks/useSharedInterestSuggestions";
+import useGroupSearch from "../hooks/useGroupSearch";
 import { api } from "../api";
 
 const defaultFilters = {
@@ -65,8 +66,8 @@ export default function Home() {
   } = useSharedInterestSuggestions();
 
   const trimmedSearch = searchTerm.trim();
-  const suggestionsEnabled = trimmedSearch.length >= 2;
-  const searchState = useFriendSearch(trimmedSearch, {
+  const suggestionsEnabled = true;
+  const friendSearchState = useFriendSearch(trimmedSearch, {
     enabled: suggestionsEnabled,
     debounceMs: 350,
     limit: 20,
@@ -74,11 +75,32 @@ export default function Home() {
   });
 
   const {
-    results: searchResults,
-    loading: searchLoading,
-    error: searchError,
-    active: searchActive,
-  } = searchState;
+    results: userSearchResults,
+    loading: friendSearchLoading,
+    error: friendSearchError,
+    active: friendSearchActive,
+  } = friendSearchState;
+
+  const groupSearchState = useGroupSearch(trimmedSearch, {
+    enabled: suggestionsEnabled,
+    debounceMs: 350,
+    limit: 12,
+    refreshKey: searchRefreshIndex,
+  });
+
+  const {
+    results: groupSearchResults,
+    loading: groupSearchLoading,
+    error: groupSearchError,
+    active: groupSearchActive,
+  } = groupSearchState;
+
+  const combinedSearchActive = friendSearchActive || groupSearchActive;
+  const combinedSearchLoading = friendSearchLoading || groupSearchLoading;
+  const combinedSearchError = friendSearchError || groupSearchError;
+  const totalSearchResults =
+    (Array.isArray(userSearchResults) ? userSearchResults.length : 0) +
+    (Array.isArray(groupSearchResults) ? groupSearchResults.length : 0);
 
   const suggestionFilters = useMemo(
     () => ({
@@ -181,7 +203,7 @@ export default function Home() {
 
   const displaySuggestions = useMemo(() => {
     if (!suggestionsEnabled) return [];
-    if (searchActive || !trimmedSearch) return suggestions;
+    if (!trimmedSearch) return suggestions;
     const normalized = trimmedSearch.toLowerCase();
     return suggestions.filter((suggestion) => {
       const city = suggestion.city?.toLowerCase() || "";
@@ -194,7 +216,12 @@ export default function Home() {
         .some((interest) => interest.toLowerCase().includes(normalized));
       return matchName || matchCity || matchHeadline || matchInterest;
     });
-  }, [suggestionsEnabled, suggestions, trimmedSearch, searchActive]);
+  }, [
+    suggestionsEnabled,
+    suggestions,
+    trimmedSearch,
+    combinedSearchActive,
+  ]);
 
   const handleFilterChange = (nextFilters) => {
     setFilters((prev) => ({ ...prev, ...nextFilters }));
@@ -403,6 +430,15 @@ export default function Home() {
         pendingCount={pendingCount}
         onRefresh={refreshAll}
         onLogout={handleLogout}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchUsers={userSearchResults}
+        searchGroups={groupSearchResults}
+        searchActive={combinedSearchActive}
+        searchLoading={combinedSearchLoading}
+        searchError={combinedSearchError}
+        onSendRequest={handleSendRequest}
+        onJoinGroup={handleJoinGroup}
         requests={requests}
         requestsLoading={requestsLoading}
         requestsError={requestsError}
@@ -440,9 +476,9 @@ export default function Home() {
           interests={availableInterests}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          searchActive={searchActive}
-          searchLoading={searchLoading}
-          searchCount={searchResults.length}
+          searchActive={combinedSearchActive}
+          searchLoading={combinedSearchLoading}
+          searchCount={totalSearchResults}
           insights={insights}
           groups={myGroups}
           onCreateGroup={handleCreateGroup}
@@ -468,11 +504,15 @@ export default function Home() {
 
           <SearchResultsPanel
             query={trimmedSearch}
-            active={searchActive}
-            loading={searchLoading}
-            error={searchError}
-            results={searchResults}
+            active={combinedSearchActive}
+            userLoading={friendSearchLoading}
+            groupLoading={groupSearchLoading}
+            userError={friendSearchError}
+            groupError={groupSearchError}
+            userResults={userSearchResults}
+            groupResults={groupSearchResults}
             onSendRequest={handleSendRequest}
+            onJoinGroup={handleJoinGroup}
             onAccept={handleAcceptRequest}
             onReject={handleRejectRequest}
             onCancel={handleCancelRequest}
@@ -489,7 +529,9 @@ export default function Home() {
             lastAction={lastAction}
             filters={filters}
             searchTerm={
-              suggestionsEnabled && !searchActive ? trimmedSearch : ""
+              suggestionsEnabled && !combinedSearchActive
+                ? trimmedSearch
+                : ""
             }
             searchEnabled={suggestionsEnabled}
           />
@@ -521,3 +563,4 @@ export default function Home() {
     </div>
   );
 }
+

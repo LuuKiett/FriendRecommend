@@ -60,7 +60,7 @@ router.post("/register", async (req, res) => {
   const session = driver.session();
 
   try {
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = password;
 
     const existing = await session.run(
       `MATCH (u:User {email: $email}) RETURN u`,
@@ -141,8 +141,9 @@ router.post("/login", async (req, res) => {
 
     const userNode = result.records[0].get("u");
     const user = userNode.properties;
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
+
+    // ⚠️ Bỏ bcrypt.compare, so sánh trực tiếp password
+    if (user.password !== password) {
       return res.status(401).json({ error: "Mật khẩu không chính xác." });
     }
 
